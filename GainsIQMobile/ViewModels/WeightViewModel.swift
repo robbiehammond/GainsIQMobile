@@ -105,12 +105,25 @@ class WeightViewModel: ObservableObject {
     }
     
     private func loadWeightTrend() async throws {
+        // Try to get trend from API first (for backwards compatibility)
         do {
             weightTrend = try await apiClient.getWeightTrend()
         } catch {
-            // Weight trend is optional - don't fail if it's not available
-            weightTrend = nil
+            // Fall back to local Kalman filter analysis if API trend not available
+            weightTrend = calculateLocalWeightTrend()
         }
+    }
+    
+    /// Calculate weight trend using local Kalman filter analysis
+    private func calculateLocalWeightTrend() -> WeightTrend? {
+        guard !weightEntries.isEmpty else { return nil }
+        
+        // Use Kalman filter to analyze the weight data
+        guard let analysis = WeightKalmanFilter.analyzeWeightData(weightEntries, recencyWeightingFactor: 0.7) else {
+            return nil
+        }
+        
+        return WeightTrend.from(analysis: analysis)
     }
     
     private func convertToPounds(_ weight: Float) -> Float {
@@ -175,18 +188,52 @@ class WeightViewModel: ObservableObject {
         }
     }
     
+    /// Get future projection data only (from now onwards)
     var projectedTrendData: [ChartDataPoint] {
         guard let trend = weightTrend,
-              let lastEntry = displayWeightEntries.last else { return [] }
+              !displayWeightEntries.isEmpty else { return [] }
         
+        // Generate only future projection (from now onwards)
         let now = Date()
-        let oneMonthLater = now.addingTimeInterval(30 * 24 * 60 * 60)
-        let projectedWeight = Double(lastEntry.weight) + (trend.slope * 30)
+        let futureEndTime = now.addingTimeInterval(30 * 24 * 60 * 60) // 30 days ahead
+        let futureRange = now...futureEndTime
         
-        return [
-            ChartDataPoint(date: now, value: Double(lastEntry.weight), timestamp: now.unixTimestamp),
-            ChartDataPoint(date: oneMonthLater, value: projectedWeight, timestamp: oneMonthLater.unixTimestamp)
-        ]
+        // If we have Kalman analysis, use it for projection
+        if let analysis = WeightKalmanFilter.analyzeWeightData(weightEntries, recencyWeightingFactor: 0.7) {
+            let trendPoints = analysis.generateTrendLine(for: futureRange)
+            return trendPoints.map { (date, weight) in
+                ChartDataPoint(date: date, value: weight, timestamp: date.unixTimestamp)
+            }
+        } else {
+            // Fallback to simple linear projection
+            let currentWeight = trend.filteredWeight != 0.0 ? trend.filteredWeight : Double(displayWeightEntries.last?.weight ?? 0)
+            let projectedWeight = currentWeight + (trend.weeklyChange * 4.33) // 4.33 weeks in a month
+            
+            return [
+                ChartDataPoint(date: now, value: currentWeight, timestamp: now.unixTimestamp),
+                ChartDataPoint(date: futureEndTime, value: projectedWeight, timestamp: futureEndTime.unixTimestamp)
+            ]
+        }
+    }
+    
+    /// Get filtered weight data for smoother charting (historical data only)
+    var filteredChartData: [ChartDataPoint] {
+        guard let analysis = WeightKalmanFilter.analyzeWeightData(displayWeightEntries, recencyWeightingFactor: 0.7) else {
+            return []
+        }
+        
+        return zip(analysis.filteredWeights, analysis.timestamps).map { (weight, timestamp) in
+            ChartDataPoint(
+                date: Date(timeIntervalSince1970: TimeInterval(timestamp)),
+                value: weight,
+                timestamp: Int64(timestamp)
+            )
+        }.filter { dataPoint in
+            // Filter to selected time range and only show historical data (not future)
+            let cutoffDate = Date().addingTimeInterval(-selectedTimeRange.timeInterval)
+            let now = Date()
+            return dataPoint.date >= cutoffDate && dataPoint.date <= now
+        }
     }
     
     var chartYAxisRange: ClosedRange<Double> {

@@ -172,9 +172,23 @@ struct WeightTrackingView: View {
     
     private func trendSection(trend: WeightTrend) -> some View {
         VStack(alignment: .leading, spacing: Constants.UI.Spacing.small) {
-            Text("Weight Trend")
-                .font(.headline)
-                .foregroundColor(.primary)
+            HStack {
+                Text("Weight Trend")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                // Confidence indicator
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(confidenceColor(trend.confidence))
+                        .frame(width: 8, height: 8)
+                    Text(trend.confidenceLevel)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -187,6 +201,12 @@ struct WeightTrackingView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(trend.isGaining ? .blue : trend.isLosing ? .red : .secondary)
+                    
+                    if trend.filteredWeight > 0 {
+                        Text("Current: \(userDefaults.formatWeight(Float(trend.filteredWeight)))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
@@ -199,6 +219,19 @@ struct WeightTrackingView: View {
         .padding(Constants.UI.Padding.medium)
         .background(Color(.systemGray6))
         .cornerRadius(Constants.UI.cornerRadius)
+    }
+    
+    private func confidenceColor(_ confidence: Double) -> Color {
+        switch confidence {
+        case 0.8...1.0:
+            return .green
+        case 0.6..<0.8:
+            return .yellow
+        case 0.4..<0.6:
+            return .orange
+        default:
+            return .red
+        }
     }
     
     private var chartSection: some View {
@@ -230,25 +263,27 @@ struct WeightTrackingView: View {
                     .frame(height: 200)
             } else {
                 Chart {
-                    // Weight data points
+                    // Raw weight data points
                     ForEach(viewModel.chartData, id: \.timestamp) { dataPoint in
-                        LineMark(
-                            x: .value("Date", dataPoint.date),
-                            y: .value("Weight", dataPoint.value)
-                        )
-                        .foregroundStyle(Color.blue)
-                        .symbol(.circle)
-                        .symbolSize(50)
-                        
                         PointMark(
                             x: .value("Date", dataPoint.date),
                             y: .value("Weight", dataPoint.value)
                         )
-                        .foregroundStyle(Color.blue)
-                        .symbolSize(30)
+                        .foregroundStyle(Color.blue.opacity(0.7))
+                        .symbolSize(40)
                     }
                     
-                    // Trend line (if available)
+                    // Kalman filtered line of best fit
+                    ForEach(viewModel.filteredChartData, id: \.timestamp) { dataPoint in
+                        LineMark(
+                            x: .value("Date", dataPoint.date),
+                            y: .value("Filtered Weight", dataPoint.value)
+                        )
+                        .foregroundStyle(Color.green)
+                        .lineStyle(StrokeStyle(lineWidth: 3))
+                    }
+                    
+                    // Trend projection (if available)
                     if !viewModel.projectedTrendData.isEmpty {
                         ForEach(viewModel.projectedTrendData, id: \.timestamp) { trendPoint in
                             LineMark(
@@ -290,9 +325,18 @@ struct WeightTrackingView: View {
             HStack(spacing: Constants.UI.Spacing.medium) {
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(Color.blue)
+                        .fill(Color.blue.opacity(0.7))
                         .frame(width: 8, height: 8)
-                    Text("Weight")
+                    Text("Raw Data")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack(spacing: 4) {
+                    Rectangle()
+                        .fill(Color.green)
+                        .frame(width: 12, height: 2)
+                    Text("Filtered")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -302,7 +346,7 @@ struct WeightTrackingView: View {
                         Rectangle()
                             .fill(Color.orange)
                             .frame(width: 12, height: 2)
-                        Text("Trend")
+                        Text("Projection")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

@@ -60,6 +60,11 @@ extension WeightEntry {
         WeightEntry(timestamp: Int64(Date().timeIntervalSince1970), weight: 180.5),
         WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 86400), weight: 181.0),
         WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 172800), weight: 180.8),
-        WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 259200), weight: 181.2)
+        WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 259200), weight: 181.2),
+        WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 345600), weight: 181.5),
+        WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 432000), weight: 180.9),
+        WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 518400), weight: 181.8),
+        WeightEntry(timestamp: Int64(Date().timeIntervalSince1970 - 604800), weight: 182.1)
     ]
 }
+
