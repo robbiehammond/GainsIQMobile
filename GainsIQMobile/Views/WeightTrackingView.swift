@@ -280,19 +280,7 @@ struct WeightTrackingView: View {
                             y: .value("Filtered Weight", dataPoint.value)
                         )
                         .foregroundStyle(Color.green)
-                        .lineStyle(StrokeStyle(lineWidth: 3))
-                    }
-                    
-                    // Trend projection (if available)
-                    if !viewModel.projectedTrendData.isEmpty {
-                        ForEach(viewModel.projectedTrendData, id: \.timestamp) { trendPoint in
-                            LineMark(
-                                x: .value("Date", trendPoint.date),
-                                y: .value("Trend", trendPoint.value)
-                            )
-                            .foregroundStyle(Color.orange)
-                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [5]))
-                        }
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
                     }
                 }
                 .frame(height: 250)
@@ -336,20 +324,9 @@ struct WeightTrackingView: View {
                     Rectangle()
                         .fill(Color.green)
                         .frame(width: 12, height: 2)
-                    Text("Filtered")
+                    Text("Filtered Trend")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                }
-                
-                if !viewModel.projectedTrendData.isEmpty {
-                    HStack(spacing: 4) {
-                        Rectangle()
-                            .fill(Color.orange)
-                            .frame(width: 12, height: 2)
-                        Text("Projection")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                 }
                 
                 Spacer()

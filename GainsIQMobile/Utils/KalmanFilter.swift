@@ -270,8 +270,8 @@ extension WeightKalmanFilter {
         // Initialize filter with first measurement
         let firstEntry = sortedEntries.first!
         let filter = WeightKalmanFilter(
-            processNoise: 0.1,
-            measurementNoise: 0.5,
+            processNoise: 0.05,  // Reduced for smoother trend (was 0.1)
+            measurementNoise: 0.8,  // Increased to trust measurements less (was 0.5)
             initialWeight: Double(firstEntry.weight),
             initialRate: 0.0
         )
@@ -286,7 +286,7 @@ extension WeightKalmanFilter {
             
             // Apply recency weighting - recent measurements get lower noise (higher confidence)
             let recencyFactor = calculateRecencyWeight(for: entry, in: sortedEntries, factor: recencyWeightingFactor)
-            let adjustedNoise = 0.5 * (1.0 - recencyFactor) + 0.1 * recencyFactor
+            let adjustedNoise = 1.0 * (1.0 - recencyFactor) + 0.3 * recencyFactor  // Smoother range
             
             // Create a new filter with adjusted noise for this measurement
             let adjustedFilter = WeightKalmanFilter(

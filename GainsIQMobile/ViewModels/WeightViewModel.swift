@@ -222,7 +222,7 @@ class WeightViewModel: ObservableObject {
             return []
         }
         
-        return zip(analysis.filteredWeights, analysis.timestamps).map { (weight, timestamp) in
+        let basePoints = zip(analysis.filteredWeights, analysis.timestamps).map { (weight, timestamp) in
             ChartDataPoint(
                 date: Date(timeIntervalSince1970: TimeInterval(timestamp)),
                 value: weight,
@@ -234,6 +234,48 @@ class WeightViewModel: ObservableObject {
             let now = Date()
             return dataPoint.date >= cutoffDate && dataPoint.date <= now
         }
+        
+        // Add interpolated points for smoother visual line
+        return interpolatePoints(basePoints)
+    }
+    
+    /// Interpolate between data points for smoother line visualization
+    private func interpolatePoints(_ points: [ChartDataPoint]) -> [ChartDataPoint] {
+        guard points.count >= 2 else { return points }
+        
+        var smoothedPoints: [ChartDataPoint] = []
+        
+        for i in 0..<points.count - 1 {
+            let currentPoint = points[i]
+            let nextPoint = points[i + 1]
+            
+            // Add the current point
+            smoothedPoints.append(currentPoint)
+            
+            // Add interpolated points between current and next
+            let timeDiff = nextPoint.date.timeIntervalSince1970 - currentPoint.date.timeIntervalSince1970
+            let valueDiff = nextPoint.value - currentPoint.value
+            
+            // Add 2 intermediate points for smoothness
+            for j in 1...2 {
+                let ratio = Double(j) / 3.0
+                let interpolatedTime = currentPoint.date.timeIntervalSince1970 + timeDiff * ratio
+                let interpolatedValue = currentPoint.value + valueDiff * ratio
+                
+                smoothedPoints.append(ChartDataPoint(
+                    date: Date(timeIntervalSince1970: interpolatedTime),
+                    value: interpolatedValue,
+                    timestamp: Int64(interpolatedTime)
+                ))
+            }
+        }
+        
+        // Add the last point
+        if let lastPoint = points.last {
+            smoothedPoints.append(lastPoint)
+        }
+        
+        return smoothedPoints
     }
     
     var chartYAxisRange: ClosedRange<Double> {
