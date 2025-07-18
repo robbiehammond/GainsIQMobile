@@ -1,0 +1,158 @@
+import Foundation
+
+// MARK: - Request Models
+
+struct AddExerciseRequest: Codable {
+    let exerciseName: String
+    
+    enum CodingKeys: String, CodingKey {
+        case exerciseName = "exercise_name"
+    }
+}
+
+struct DeleteExerciseRequest: Codable {
+    let exerciseName: String
+    
+    enum CodingKeys: String, CodingKey {
+        case exerciseName = "exercise_name"
+    }
+}
+
+struct LogSetRequest: Codable {
+    let exercise: String
+    let reps: String
+    let sets: Int
+    let weight: Float
+    let isCutting: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case exercise
+        case reps
+        case sets
+        case weight
+        case isCutting
+    }
+}
+
+struct EditSetRequest: Codable {
+    let workoutId: String
+    let timestamp: Int64
+    let reps: String?
+    let sets: Int?
+    let weight: Float?
+    
+    enum CodingKeys: String, CodingKey {
+        case workoutId
+        case timestamp
+        case reps
+        case sets
+        case weight
+    }
+}
+
+struct DeleteSetRequest: Codable {
+    let workoutId: String
+    let timestamp: Int64
+    
+    enum CodingKeys: String, CodingKey {
+        case workoutId
+        case timestamp
+    }
+}
+
+struct LogWeightRequest: Codable {
+    let weight: Float
+    
+    enum CodingKeys: String, CodingKey {
+        case weight
+    }
+}
+
+// MARK: - Response Models
+
+struct APIResponse<T: Codable>: Codable {
+    let data: T?
+    let message: String?
+    let error: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case data
+        case message
+        case error
+    }
+}
+
+struct MessageResponse: Codable {
+    let message: String
+    
+    enum CodingKeys: String, CodingKey {
+        case message
+    }
+}
+
+struct SuccessResponse: Codable {
+    let success: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+    }
+}
+
+// MARK: - API Error Types
+
+enum APIError: Error, LocalizedError {
+    case invalidURL
+    case noData
+    case invalidResponse
+    case decodingError(Error)
+    case networkError(Error)
+    case serverError(String)
+    case unauthorized
+    case notFound
+    case badRequest(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL"
+        case .noData:
+            return "No data received"
+        case .invalidResponse:
+            return "Invalid response format"
+        case .decodingError(let error):
+            return "Failed to decode response: \(error.localizedDescription)"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .serverError(let message):
+            return "Server error: \(message)"
+        case .unauthorized:
+            return "Unauthorized: Invalid API key"
+        case .notFound:
+            return "Resource not found"
+        case .badRequest(let message):
+            return "Bad request: \(message)"
+        }
+    }
+}
+
+// MARK: - Utility Extensions
+
+extension LogSetRequest {
+    init(exercise: String, reps: String, weight: Float, isCutting: Bool) {
+        self.exercise = exercise
+        self.reps = reps
+        self.sets = 1 // Default to 1 set as per the web app
+        self.weight = weight
+        self.isCutting = isCutting
+    }
+}
+
+extension EditSetRequest {
+    init(workoutId: String, timestamp: Int64, reps: String?, weight: Float?) {
+        self.workoutId = workoutId
+        self.timestamp = timestamp
+        self.reps = reps
+        self.sets = nil // Don't modify sets in edit
+        self.weight = weight
+    }
+}
