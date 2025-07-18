@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 class ProgressViewModel: ObservableObject {
     @Published var exercises: [Exercise] = []
-    @Published var selectedExercise: String = ""
+    // selectedExercise is now managed by UserDefaultsManager
     @Published var workoutSets: [WorkoutSet] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -33,12 +33,12 @@ class ProgressViewModel: ObservableObject {
             exercises = exerciseNames.map { Exercise(name: $0) }
             
             // Auto-select first exercise if none selected
-            if selectedExercise.isEmpty && !exercises.isEmpty {
-                selectedExercise = exercises[0].name
+            if userDefaults.selectedExercise.isEmpty && !exercises.isEmpty {
+                userDefaults.selectedExercise = exercises[0].name
             }
             
             // Load progress data for selected exercise (whether auto-selected or previously selected)
-            if !selectedExercise.isEmpty {
+            if !userDefaults.selectedExercise.isEmpty {
                 await loadProgressData()
             }
         } catch {
@@ -49,7 +49,7 @@ class ProgressViewModel: ObservableObject {
     }
     
     func loadProgressData() async {
-        guard !selectedExercise.isEmpty else { return }
+        guard !userDefaults.selectedExercise.isEmpty else { return }
         
         isLoading = true
         errorMessage = nil
@@ -59,7 +59,7 @@ class ProgressViewModel: ObservableObject {
             let startDate = endDate.addingTimeInterval(-selectedTimeRange.timeInterval)
             
             workoutSets = try await apiClient.getSetsByExercise(
-                exerciseName: selectedExercise,
+                exerciseName: userDefaults.selectedExercise,
                 start: startDate.unixTimestamp,
                 end: endDate.unixTimestamp
             )
@@ -71,7 +71,6 @@ class ProgressViewModel: ObservableObject {
     }
     
     func changeExercise(_ exercise: String) {
-        selectedExercise = exercise
         userDefaults.selectedExercise = exercise
         Task {
             await loadProgressData()
@@ -93,7 +92,7 @@ class ProgressViewModel: ObservableObject {
     // MARK: - Private Methods
     
     private func loadUserDefaults() {
-        selectedExercise = userDefaults.selectedExercise
+        // selectedExercise is now managed directly by UserDefaultsManager
         selectedTimeRange = userDefaults.chartTimeRange
     }
     
@@ -194,7 +193,7 @@ class ProgressViewModel: ObservableObject {
     }
     
     var hasSelectedExercise: Bool {
-        !selectedExercise.isEmpty
+        !userDefaults.selectedExercise.isEmpty
     }
     
     var weightDisplayUnit: String {
@@ -289,7 +288,7 @@ extension ProgressViewModel {
     static let mock: ProgressViewModel = {
         let viewModel = ProgressViewModel()
         viewModel.exercises = Exercise.mockArray
-        viewModel.selectedExercise = "Bench Press"
+        viewModel.userDefaults.selectedExercise = "Bench Press"
         viewModel.workoutSets = WorkoutSet.mockArray
         return viewModel
     }()

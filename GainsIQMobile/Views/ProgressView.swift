@@ -61,7 +61,7 @@ struct ProgressView: View {
                     Text("Exercise:")
                         .foregroundColor(.secondary)
                     
-                    Text(viewModel.selectedExercise)
+                    Text(userDefaults.selectedExercise)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
                     
@@ -87,7 +87,7 @@ struct ProgressView: View {
                     .foregroundColor(.secondary)
                     .italic()
             } else {
-                Picker("Exercise", selection: $viewModel.selectedExercise) {
+                Picker("Exercise", selection: $userDefaults.selectedExercise) {
                     Text("Select Exercise").tag("")
                     ForEach(viewModel.exercises, id: \.name) { exercise in
                         Text(exercise.name).tag(exercise.name)
@@ -95,7 +95,7 @@ struct ProgressView: View {
                 }
                 .pickerStyle(MenuPickerStyle())
                 .tint(.primary)
-                .onChange(of: viewModel.selectedExercise) { newExercise in
+                .onChange(of: userDefaults.selectedExercise) { newExercise in
                     viewModel.changeExercise(newExercise)
                 }
             }
@@ -277,7 +277,7 @@ struct ProgressView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(.secondary)
             
-            Text("Start logging workouts for \(viewModel.selectedExercise) to see your progress here")
+            Text("Start logging workouts for \(userDefaults.selectedExercise) to see your progress here")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

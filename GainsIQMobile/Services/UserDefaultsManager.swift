@@ -5,7 +5,9 @@ class UserDefaultsManager: ObservableObject {
     
     private let userDefaults = UserDefaults.standard
     
-    private init() {}
+    private init() {
+        loadSettings()
+    }
     
     // MARK: - Keys
     
@@ -71,12 +73,9 @@ class UserDefaultsManager: ObservableObject {
     
     // MARK: - Selected Exercise
     
-    var selectedExercise: String {
-        get {
-            return userDefaults.string(forKey: Keys.selectedExercise) ?? ""
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.selectedExercise)
+    @Published var selectedExercise: String = "" {
+        didSet {
+            userDefaults.set(selectedExercise, forKey: Keys.selectedExercise)
         }
     }
     
@@ -123,6 +122,8 @@ class UserDefaultsManager: ObservableObject {
            let cuttingState = CuttingState(rawValue: cuttingStateString) {
             self.cuttingState = cuttingState
         }
+        
+        self.selectedExercise = userDefaults.string(forKey: Keys.selectedExercise) ?? ""
         
         self.enableNotifications = userDefaults.bool(forKey: Keys.enableNotifications)
         self.enableHaptics = userDefaults.bool(forKey: Keys.enableHaptics)

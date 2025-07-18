@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 class WorkoutViewModel: ObservableObject {
     @Published var exercises: [Exercise] = []
-    @Published var selectedExercise: String = ""
+    // selectedExercise is now managed by UserDefaultsManager
     @Published var reps: String = ""
     @Published var weight: String = ""
     @Published var isLoading = false
@@ -53,7 +53,7 @@ class WorkoutViewModel: ObservableObject {
     }
     
     func logWorkout() async {
-        guard !selectedExercise.isEmpty,
+        guard !userDefaults.selectedExercise.isEmpty,
               !reps.isEmpty,
               !weight.isEmpty,
               let weightValue = Float(weight) else {
@@ -69,7 +69,7 @@ class WorkoutViewModel: ObservableObject {
             let weightInPounds = convertToPounds(weightValue)
             
             try await apiClient.logWorkoutSet(
-                exercise: selectedExercise,
+                exercise: userDefaults.selectedExercise,
                 reps: reps,
                 weight: weightInPounds,
                 isCutting: isCutting
@@ -82,8 +82,7 @@ class WorkoutViewModel: ObservableObject {
             reps = ""
             weight = ""
             
-            // Save selected exercise to user defaults
-            userDefaults.selectedExercise = selectedExercise
+            // Exercise selection is automatically saved via UserDefaultsManager
             
         } catch {
             errorMessage = error.localizedDescription
@@ -108,7 +107,7 @@ class WorkoutViewModel: ObservableObject {
             exercises.append(Exercise(name: newExerciseName.trimmed))
             
             // Select the new exercise
-            selectedExercise = newExerciseName.trimmed
+            userDefaults.selectedExercise = newExerciseName.trimmed
             
             // Clear form and close sheet
             newExerciseName = ""
@@ -157,7 +156,7 @@ class WorkoutViewModel: ObservableObject {
     // MARK: - Private Methods
     
     private func loadUserDefaults() {
-        selectedExercise = userDefaults.selectedExercise
+        // selectedExercise is now managed directly by UserDefaultsManager
     }
     
     private func convertToPounds(_ weight: Float) -> Float {
@@ -167,7 +166,7 @@ class WorkoutViewModel: ObservableObject {
     // MARK: - Computed Properties
     
     var canSubmit: Bool {
-        !selectedExercise.isEmpty && !reps.isEmpty && !weight.isEmpty && !isLoading
+        !userDefaults.selectedExercise.isEmpty && !reps.isEmpty && !weight.isEmpty && !isLoading
     }
     
     var weightDisplayUnit: String {
@@ -189,7 +188,7 @@ extension WorkoutViewModel {
     static let mock: WorkoutViewModel = {
         let viewModel = WorkoutViewModel()
         viewModel.exercises = Exercise.mockArray
-        viewModel.selectedExercise = "Bench Press"
+        viewModel.userDefaults.selectedExercise = "Bench Press"
         viewModel.reps = "8"
         viewModel.weight = "185"
         return viewModel

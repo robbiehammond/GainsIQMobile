@@ -120,16 +120,16 @@ struct WorkoutTrackingView: View {
                     }
                     
                     // Selected exercise display
-                    if !viewModel.selectedExercise.isEmpty {
+                    if !userDefaults.selectedExercise.isEmpty {
                         HStack {
                             Text("Selected:")
                                 .foregroundColor(.secondary)
-                            Text(viewModel.selectedExercise)
+                            Text(userDefaults.selectedExercise)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
                             Spacer()
                             Button("Clear") {
-                                viewModel.selectedExercise = ""
+                                userDefaults.selectedExercise = ""
                             }
                             .font(.caption)
                             .foregroundColor(.blue)
@@ -141,19 +141,19 @@ struct WorkoutTrackingView: View {
                     }
                     
                     // Exercise list
-                    if !viewModel.searchText.isEmpty || viewModel.selectedExercise.isEmpty {
+                    if !viewModel.searchText.isEmpty || userDefaults.selectedExercise.isEmpty {
                         ScrollView {
                             LazyVStack(spacing: Constants.UI.Spacing.tiny) {
                                 ForEach(viewModel.filteredExercises, id: \.name) { exercise in
                                     Button(action: {
-                                        viewModel.selectedExercise = exercise.name
+                                        userDefaults.selectedExercise = exercise.name
                                         viewModel.searchText = ""
                                     }) {
                                         HStack {
                                             Text(exercise.name)
                                                 .foregroundColor(.primary)
                                             Spacer()
-                                            if viewModel.selectedExercise == exercise.name {
+                                            if userDefaults.selectedExercise == exercise.name {
                                                 Image(systemName: "checkmark")
                                                     .foregroundColor(.blue)
                                             }
