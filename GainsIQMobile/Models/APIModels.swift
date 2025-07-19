@@ -68,6 +68,37 @@ struct LogWeightRequest: Codable {
     }
 }
 
+// MARK: - Authentication Models
+
+struct LoginRequest: Codable {
+    let username: String
+    let password: String
+}
+
+struct RefreshTokenRequest: Codable {
+    let refreshToken: String
+    
+    enum CodingKeys: String, CodingKey {
+        case refreshToken = "refresh_token"
+    }
+}
+
+struct AuthResponse: Codable {
+    let accessToken: String
+    let idToken: String
+    let refreshToken: String
+    let expiresIn: Int32
+    let tokenType: String
+    
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case idToken = "id_token"
+        case refreshToken = "refresh_token"
+        case expiresIn = "expires_in"
+        case tokenType = "token_type"
+    }
+}
+
 // MARK: - Response Models
 
 struct APIResponse<T: Codable>: Codable {

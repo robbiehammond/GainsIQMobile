@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct AnalysisView: View {
-    @StateObject private var viewModel = AnalysisViewModel()
+    @StateObject private var viewModel: AnalysisViewModel
     @StateObject private var userDefaults = UserDefaultsManager.shared
+    
+    init(apiClient: GainsIQAPIClient) {
+        self._viewModel = StateObject(wrappedValue: AnalysisViewModel(apiClient: apiClient))
+    }
     
     var body: some View {
         ScrollView {
@@ -110,7 +114,7 @@ struct AnalysisView: View {
             }) {
                 HStack {
                     if viewModel.isGenerating {
-                        ProgressView()
+                        SwiftUI.ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .scaleEffect(0.8)
                     } else {
@@ -151,7 +155,7 @@ struct AnalysisView: View {
                 }) {
                     HStack {
                         if viewModel.isGenerating {
-                            ProgressView()
+                            SwiftUI.ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .purple))
                                 .scaleEffect(0.8)
                         } else {
@@ -219,7 +223,7 @@ struct AnalysisView: View {
     
     private var loadingSection: some View {
         VStack(spacing: Constants.UI.Spacing.medium) {
-            ProgressView()
+            SwiftUI.ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
                 .scaleEffect(1.5)
             
@@ -244,6 +248,10 @@ struct AnalysisView: View {
 
 struct AnalysisView_Previews: PreviewProvider {
     static var previews: some View {
-        AnalysisView()
+        AnalysisView(apiClient: GainsIQAPIClient(
+            baseURL: Config.baseURL,
+            apiKey: Config.apiKey,
+            authService: AuthService()
+        ))
     }
 }

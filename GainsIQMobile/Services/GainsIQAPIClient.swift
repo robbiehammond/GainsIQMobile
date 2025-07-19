@@ -4,16 +4,18 @@ class GainsIQAPIClient: ObservableObject {
     private let baseURL: String
     private let apiKey: String
     private let session: URLSession
+    private let authService: AuthService
     
-    init(baseURL: String, apiKey: String) {
+    init(baseURL: String, apiKey: String, authService: AuthService) {
         self.baseURL = baseURL
         self.apiKey = apiKey
+        self.authService = authService
         self.session = URLSession.shared
     }
     
     // MARK: - Private Helper Methods
     
-    private func createRequest(endpoint: String, method: HTTPMethod, body: Data? = nil) throws -> URLRequest {
+    private func createRequest(endpoint: String, method: HTTPMethod, body: Data? = nil, requiresAuth: Bool = true) async throws -> URLRequest {
         guard let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
         }
@@ -22,6 +24,11 @@ class GainsIQAPIClient: ObservableObject {
         request.httpMethod = method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        
+        if requiresAuth {
+            let accessToken = try await authService.getValidAccessToken()
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        }
         
         if let body = body {
             request.httpBody = body
@@ -77,21 +84,21 @@ class GainsIQAPIClient: ObservableObject {
     // MARK: - Exercise Endpoints
     
     func getExercises() async throws -> [String] {
-        let request = try createRequest(endpoint: "/exercises", method: .GET)
+        let request = try await createRequest(endpoint: "/exercises", method: .GET)
         return try await performRequest(request, expecting: [String].self)
     }
     
     func addExercise(_ exerciseName: String) async throws {
         let requestBody = AddExerciseRequest(exerciseName: exerciseName)
         let bodyData = try JSONEncoder().encode(requestBody)
-        let request = try createRequest(endpoint: "/exercises", method: .POST, body: bodyData)
+        let request = try await createRequest(endpoint: "/exercises", method: .POST, body: bodyData)
         let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
     }
     
     func deleteExercise(_ exerciseName: String) async throws {
         let requestBody = DeleteExerciseRequest(exerciseName: exerciseName)
         let bodyData = try JSONEncoder().encode(requestBody)
-        let request = try createRequest(endpoint: "/exercises", method: .DELETE, body: bodyData)
+        let request = try await createRequest(endpoint: "/exercises", method: .DELETE, body: bodyData)
         let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
     }
     
@@ -99,43 +106,43 @@ class GainsIQAPIClient: ObservableObject {
     
     func logWorkoutSet(_ setRequest: LogSetRequest) async throws {
         let bodyData = try JSONEncoder().encode(setRequest)
-        let request = try createRequest(endpoint: "/sets/log", method: .POST, body: bodyData)
+        let request = try await createRequest(endpoint: "/sets/log", method: .POST, body: bodyData)
         let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
     }
     
     func getLastMonthSets() async throws -> [WorkoutSet] {
-        let request = try createRequest(endpoint: "/sets/last_month", method: .GET)
+        let request = try await createRequest(endpoint: "/sets/last_month", method: .GET)
         return try await performRequest(request, expecting: [WorkoutSet].self)
     }
     
     func getSets(start: Int64, end: Int64) async throws -> [WorkoutSet] {
         let endpoint = "/sets?start=\(start)&end=\(end)"
-        let request = try createRequest(endpoint: endpoint, method: .GET)
+        let request = try await createRequest(endpoint: endpoint, method: .GET)
         return try await performRequest(request, expecting: [WorkoutSet].self)
     }
     
     func getSetsByExercise(exerciseName: String, start: Int64, end: Int64) async throws -> [WorkoutSet] {
         let encodedExercise = exerciseName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? exerciseName
         let endpoint = "/sets/by_exercise?exerciseName=\(encodedExercise)&start=\(start)&end=\(end)"
-        let request = try createRequest(endpoint: endpoint, method: .GET)
+        let request = try await createRequest(endpoint: endpoint, method: .GET)
         return try await performRequest(request, expecting: [WorkoutSet].self)
     }
     
     func editSet(_ editRequest: EditSetRequest) async throws {
         let bodyData = try JSONEncoder().encode(editRequest)
-        let request = try createRequest(endpoint: "/sets/edit", method: .PUT, body: bodyData)
+        let request = try await createRequest(endpoint: "/sets/edit", method: .PUT, body: bodyData)
         let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
     }
     
     func deleteSet(workoutId: String, timestamp: Int64) async throws {
         let requestBody = DeleteSetRequest(workoutId: workoutId, timestamp: timestamp)
         let bodyData = try JSONEncoder().encode(requestBody)
-        let request = try createRequest(endpoint: "/sets", method: .DELETE, body: bodyData)
+        let request = try await createRequest(endpoint: "/sets", method: .DELETE, body: bodyData)
         let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
     }
     
     func popLastSet() async throws -> String {
-        let request = try createRequest(endpoint: "/sets/pop", method: .POST)
+        let request = try await createRequest(endpoint: "/sets/pop", method: .POST)
         let response: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
         return response.message
     }
@@ -145,36 +152,36 @@ class GainsIQAPIClient: ObservableObject {
     func logWeight(_ weight: Float) async throws {
         let requestBody = LogWeightRequest(weight: weight)
         let bodyData = try JSONEncoder().encode(requestBody)
-        let request = try createRequest(endpoint: "/weight", method: .POST, body: bodyData)
+        let request = try await createRequest(endpoint: "/weight", method: .POST, body: bodyData)
         let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
     }
     
     func getWeights() async throws -> [WeightEntry] {
-        let request = try createRequest(endpoint: "/weight", method: .GET)
+        let request = try await createRequest(endpoint: "/weight", method: .GET)
         return try await performRequest(request, expecting: [WeightEntry].self)
     }
     
     func deleteRecentWeight() async throws -> String {
-        let request = try createRequest(endpoint: "/weight", method: .DELETE)
+        let request = try await createRequest(endpoint: "/weight", method: .DELETE)
         let response: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
         return response.message
     }
     
     func getWeightTrend() async throws -> WeightTrend {
-        let request = try createRequest(endpoint: "/weight/trend", method: .GET)
+        let request = try await createRequest(endpoint: "/weight/trend", method: .GET)
         return try await performRequest(request, expecting: WeightTrend.self)
     }
     
     // MARK: - Analysis Endpoints
     
     func generateAnalysis() async throws -> String {
-        let request = try createRequest(endpoint: "/analysis", method: .POST)
+        let request = try await createRequest(endpoint: "/analysis", method: .POST)
         let response: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
         return response.message
     }
     
     func getAnalysis() async throws -> Analysis {
-        let request = try createRequest(endpoint: "/analysis", method: .GET)
+        let request = try await createRequest(endpoint: "/analysis", method: .GET)
         let response: AnalysisResponse = try await performRequest(request, expecting: AnalysisResponse.self)
         return response.toAnalysis()
     }

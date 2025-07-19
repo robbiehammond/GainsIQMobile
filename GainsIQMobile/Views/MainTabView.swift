@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var userDefaults = UserDefaultsManager.shared
     @State private var selectedTab = 0
     
@@ -18,35 +19,35 @@ struct MainTabView: View {
         NavigationStack {
             TabView(selection: $selectedTab) {
             // Workout Tab
-            WorkoutTrackingView()
+            WorkoutTrackingView(apiClient: authViewModel.currentAPIClient)
                 .tabItem {
                     Label("Workout", systemImage: "dumbbell.fill")
                 }
                 .tag(0)
             
             // History Tab
-            HistoryView()
+            HistoryView(apiClient: authViewModel.currentAPIClient)
                 .tabItem {
                     Label("History", systemImage: "clock.fill")
                 }
                 .tag(1)
             
             // Weight Tab
-            WeightTrackingView()
+            WeightTrackingView(apiClient: authViewModel.currentAPIClient)
                 .tabItem {
                     Label("Weight", systemImage: "scalemass.fill")
                 }
                 .tag(2)
             
             // Progress Tab
-            ProgressView()
+            ProgressChartsView(apiClient: authViewModel.currentAPIClient)
                 .tabItem {
                     Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 .tag(3)
             
             // Analysis Tab
-            AnalysisView()
+            AnalysisView(apiClient: authViewModel.currentAPIClient)
                 .tabItem {
                     Label("Analysis", systemImage: "brain.head.profile")
                 }
@@ -98,5 +99,6 @@ struct ProgressPlaceholderView: View {
 struct MainTabView_Previews: PreviewProvider {
     static var previews: some View {
         MainTabView()
+            .environmentObject(AuthViewModel())
     }
 }

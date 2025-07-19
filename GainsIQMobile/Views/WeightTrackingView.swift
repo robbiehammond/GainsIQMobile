@@ -2,8 +2,12 @@ import SwiftUI
 import Charts
 
 struct WeightTrackingView: View {
-    @StateObject private var viewModel = WeightViewModel()
+    @StateObject private var viewModel: WeightViewModel
     @StateObject private var userDefaults = UserDefaultsManager.shared
+    
+    init(apiClient: GainsIQAPIClient) {
+        self._viewModel = StateObject(wrappedValue: WeightViewModel(apiClient: apiClient))
+    }
     
     var body: some View {
         ScrollView {
@@ -122,7 +126,7 @@ struct WeightTrackingView: View {
                     }) {
                         HStack {
                             if viewModel.isLoading {
-                                ProgressView()
+                                SwiftUI.ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     .scaleEffect(0.8)
                             } else {
@@ -391,6 +395,10 @@ struct WeightTrackingView: View {
 
 struct WeightTrackingView_Previews: PreviewProvider {
     static var previews: some View {
-        WeightTrackingView()
+        WeightTrackingView(apiClient: GainsIQAPIClient(
+            baseURL: Config.baseURL,
+            apiKey: Config.apiKey,
+            authService: AuthService()
+        ))
     }
 }

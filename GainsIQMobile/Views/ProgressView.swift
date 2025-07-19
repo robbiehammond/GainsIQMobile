@@ -1,9 +1,13 @@
 import SwiftUI
 import Charts
 
-struct ProgressView: View {
-    @StateObject private var viewModel = ProgressViewModel()
+struct ProgressChartsView: View {
+    @StateObject private var viewModel: ProgressViewModel
     @StateObject private var userDefaults = UserDefaultsManager.shared
+    
+    init(apiClient: GainsIQAPIClient) {
+        self._viewModel = StateObject(wrappedValue: ProgressViewModel(apiClient: apiClient))
+    }
     
     var body: some View {
         ScrollView {
@@ -347,8 +351,12 @@ struct StatCard: View {
 
 // MARK: - Preview
 
-struct ProgressView_Previews: PreviewProvider {
+struct ProgressChartsView_Previews: PreviewProvider {
     static var previews: some View {
-        ProgressView()
+        ProgressChartsView(apiClient: GainsIQAPIClient(
+            baseURL: Config.baseURL,
+            apiKey: Config.apiKey,
+            authService: AuthService()
+        ))
     }
 }

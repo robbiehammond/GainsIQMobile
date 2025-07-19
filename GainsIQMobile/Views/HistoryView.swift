@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct HistoryView: View {
-    @StateObject private var viewModel = HistoryViewModel()
+    @StateObject private var viewModel: HistoryViewModel
     @StateObject private var userDefaults = UserDefaultsManager.shared
+    
+    init(apiClient: GainsIQAPIClient) {
+        self._viewModel = StateObject(wrappedValue: HistoryViewModel(apiClient: apiClient))
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -88,7 +92,7 @@ struct HistoryView: View {
     
     private var loadingView: some View {
         VStack(spacing: Constants.UI.Spacing.medium) {
-            ProgressView()
+            SwiftUI.ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
                 .scaleEffect(1.5)
             
@@ -281,7 +285,7 @@ struct HistoryView: View {
                     }) {
                         HStack {
                             if viewModel.isLoading {
-                                ProgressView()
+                                SwiftUI.ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     .scaleEffect(0.8)
                             } else {
@@ -317,6 +321,10 @@ struct HistoryView: View {
 
 struct HistoryView_Previews: PreviewProvider {
     static var previews: some View {
-        HistoryView()
+        HistoryView(apiClient: GainsIQAPIClient(
+            baseURL: Config.baseURL,
+            apiKey: Config.apiKey,
+            authService: AuthService()
+        ))
     }
 }

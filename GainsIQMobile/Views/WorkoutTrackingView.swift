@@ -1,9 +1,13 @@
 import SwiftUI
 
 struct WorkoutTrackingView: View {
-    @StateObject private var viewModel = WorkoutViewModel()
+    @StateObject private var viewModel: WorkoutViewModel
     @StateObject private var userDefaults = UserDefaultsManager.shared
     @State private var showingAlert = false
+    
+    init(apiClient: GainsIQAPIClient) {
+        self._viewModel = StateObject(wrappedValue: WorkoutViewModel(apiClient: apiClient))
+    }
     
     var body: some View {
         ScrollView {
@@ -268,7 +272,7 @@ struct WorkoutTrackingView: View {
             }) {
                 HStack {
                     if viewModel.isLoading {
-                        ProgressView()
+                        SwiftUI.ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .scaleEffect(0.8)
                     } else {
@@ -371,7 +375,7 @@ struct WorkoutTrackingView: View {
                 }) {
                     HStack {
                         if viewModel.isLoading {
-                            ProgressView()
+                            SwiftUI.ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(0.8)
                         } else {
@@ -407,6 +411,10 @@ struct WorkoutTrackingView: View {
 
 struct WorkoutTrackingView_Previews: PreviewProvider {
     static var previews: some View {
-        WorkoutTrackingView()
+        WorkoutTrackingView(apiClient: GainsIQAPIClient(
+            baseURL: Config.baseURL,
+            apiKey: Config.apiKey,
+            authService: AuthService()
+        ))
     }
 }
