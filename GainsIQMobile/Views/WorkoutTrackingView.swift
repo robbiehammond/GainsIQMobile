@@ -412,7 +412,7 @@ struct WorkoutTrackingView: View {
 struct WorkoutTrackingView_Previews: PreviewProvider {
     static var previews: some View {
         WorkoutTrackingView(apiClient: GainsIQAPIClient(
-            baseURL: Config.baseURL,
+            baseURL: Constants.API.defaultBaseURL,
             apiKey: Config.apiKey,
             authService: AuthService()
         ))

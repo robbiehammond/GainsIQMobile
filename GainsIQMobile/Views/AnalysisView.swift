@@ -249,7 +249,7 @@ struct AnalysisView: View {
 struct AnalysisView_Previews: PreviewProvider {
     static var previews: some View {
         AnalysisView(apiClient: GainsIQAPIClient(
-            baseURL: Config.baseURL,
+            baseURL: Constants.API.defaultBaseURL,
             apiKey: Config.apiKey,
             authService: AuthService()
         ))

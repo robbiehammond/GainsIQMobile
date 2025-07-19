@@ -15,7 +15,7 @@ struct Constants {
     // MARK: - API Configuration
     
     struct API {
-        static let defaultBaseURL = Config.baseURL
+        static let defaultBaseURL = Environment.current.apiBaseURL
         static let timeout: TimeInterval = 30.0
         static let retryCount = 3
         static let retryDelay: TimeInterval = 1.0
@@ -248,7 +248,7 @@ extension Constants {
             case .development:
                 return Config.developmentURL
             case .staging:
-                return Config.stagingURL
+                return Config.developmentURL // Using development URL for staging
             case .production:
                 return Config.baseURL
             }

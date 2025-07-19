@@ -354,7 +354,7 @@ struct StatCard: View {
 struct ProgressChartsView_Previews: PreviewProvider {
     static var previews: some View {
         ProgressChartsView(apiClient: GainsIQAPIClient(
-            baseURL: Config.baseURL,
+            baseURL: Constants.API.defaultBaseURL,
             apiKey: Config.apiKey,
             authService: AuthService()
         ))

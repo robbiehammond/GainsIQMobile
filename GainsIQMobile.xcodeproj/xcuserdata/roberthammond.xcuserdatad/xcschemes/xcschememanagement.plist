@@ -9,6 +9,29 @@
 			<key>orderHint</key>
 			<integer>0</integer>
 		</dict>
+		<key>GainsIQMobileRelease.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>2345443C2E29F22000DA22C9</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>234544492E29F22200DA22C9</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>234544532E29F22200DA22C9</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
 	</dict>
 </dict>
 </plist>

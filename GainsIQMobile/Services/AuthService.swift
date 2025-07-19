@@ -21,7 +21,7 @@ class AuthService: ObservableObject {
         let loginRequest = LoginRequest(username: username, password: password)
         let bodyData = try JSONEncoder().encode(loginRequest)
         
-        guard let url = URL(string: Config.baseURL + "auth/login") else {
+        guard let url = URL(string: Constants.API.defaultBaseURL + "auth/login") else {
             throw APIError.invalidURL
         }
         
@@ -71,7 +71,7 @@ class AuthService: ObservableObject {
         let refreshRequest = RefreshTokenRequest(refreshToken: refreshToken)
         let bodyData = try JSONEncoder().encode(refreshRequest)
         
-        guard let url = URL(string: Config.baseURL + "auth/refresh") else {
+        guard let url = URL(string: Constants.API.defaultBaseURL + "auth/refresh") else {
             throw APIError.invalidURL
         }
         

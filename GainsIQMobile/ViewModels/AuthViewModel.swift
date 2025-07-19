@@ -12,7 +12,7 @@ class AuthViewModel: ObservableObject {
     init() {
         self.authService = AuthService()
         self.apiClient = GainsIQAPIClient(
-            baseURL: Config.baseURL,
+            baseURL: Constants.API.defaultBaseURL,
             apiKey: Config.apiKey,
             authService: authService
         )

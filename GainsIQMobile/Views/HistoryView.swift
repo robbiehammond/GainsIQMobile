@@ -322,7 +322,7 @@ struct HistoryView: View {
 struct HistoryView_Previews: PreviewProvider {
     static var previews: some View {
         HistoryView(apiClient: GainsIQAPIClient(
-            baseURL: Config.baseURL,
+            baseURL: Constants.API.defaultBaseURL,
             apiKey: Config.apiKey,
             authService: AuthService()
         ))

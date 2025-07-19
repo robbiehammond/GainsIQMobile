@@ -396,7 +396,7 @@ struct WeightTrackingView: View {
 struct WeightTrackingView_Previews: PreviewProvider {
     static var previews: some View {
         WeightTrackingView(apiClient: GainsIQAPIClient(
-            baseURL: Config.baseURL,
+            baseURL: Constants.API.defaultBaseURL,
             apiKey: Config.apiKey,
             authService: AuthService()
         ))
