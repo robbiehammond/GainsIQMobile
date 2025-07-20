@@ -31,6 +31,14 @@ class ProgressViewModel: ObservableObject {
     
     // MARK: - Public Methods
     
+    func getSetsForDate(_ date: Date) -> [WorkoutSet] {
+        let targetDate = Calendar.current.startOfDay(for: date)
+        return displaySets.filter { set in
+            let setDate = Calendar.current.startOfDay(for: set.date)
+            return setDate == targetDate && set.exercise == userDefaults.selectedExercise
+        }
+    }
+    
     func loadExercises() async {
         isLoading = true
         errorMessage = nil

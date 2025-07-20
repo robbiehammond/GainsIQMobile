@@ -5,6 +5,7 @@ struct ProgressChartsView: View {
     @StateObject private var viewModel: ProgressViewModel
     @StateObject private var userDefaults = UserDefaultsManager.shared
     @State private var selectedDataPoint: ExerciseProgressDataPoint?
+    @State private var selectedDate: Date?
     
     init(apiClient: GainsIQAPIClient) {
         self._viewModel = StateObject(wrappedValue: ProgressViewModel(apiClient: apiClient))
@@ -172,9 +173,22 @@ struct ProgressChartsView: View {
                     chartLegend
                 }
                 
-                Text(viewModel.progressSummary)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack {
+                    Text(viewModel.progressSummary)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    // Debug button to test detail view
+                    if !viewModel.chartData.isEmpty {
+                        Button("Test Detail") {
+                            selectedDataPoint = viewModel.chartData.first
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                    }
+                }
             }
         }
         .padding(Constants.UI.Padding.medium)
@@ -264,7 +278,7 @@ struct ProgressChartsView: View {
                     endPoint: .top
                 )
             )
-            .opacity(0.8)
+            .opacity(selectedDataPoint == nil || (selectedDataPoint != nil && Calendar.current.isDate(selectedDataPoint!.date, inSameDayAs: dataPoint.date)) ? 1.0 : 0.5)
             
             // Line chart for normalized reps
             LineMark(
@@ -274,11 +288,12 @@ struct ProgressChartsView: View {
             .foregroundStyle(.orange)
             .lineStyle(StrokeStyle(lineWidth: 3))
             .symbol(.circle)
-            .symbolSize(60)
+            .symbolSize(selectedDataPoint != nil && Calendar.current.isDate(selectedDataPoint!.date, inSameDayAs: dataPoint.date) ? 80 : 60)
+            .opacity(selectedDataPoint == nil || (selectedDataPoint != nil && Calendar.current.isDate(selectedDataPoint!.date, inSameDayAs: dataPoint.date)) ? 1.0 : 0.5)
         }
         .frame(height: 280)
         .chartXScale(domain: viewModel.chartTimeRange)
-        .chartYScale(domain: 0...100) // Fixed 0-100 scale for normalized values
+        .chartYScale(domain: 0...100)
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 4]))
@@ -291,7 +306,6 @@ struct ProgressChartsView: View {
             AxisMarks(values: [0, 25, 50, 75, 100]) { _ in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 4]))
                     .foregroundStyle(.secondary.opacity(0.3))
-                // Remove axis labels by not providing AxisValueLabel
             }
         }
         .chartPlotStyle { plotArea in
@@ -308,7 +322,7 @@ struct ProgressChartsView: View {
                 )
                 .cornerRadius(12)
         }
-        .chartBackground { chartProxy in
+        .overlay(
             GeometryReader { geometry in
                 Rectangle()
                     .fill(Color.clear)
@@ -316,11 +330,11 @@ struct ProgressChartsView: View {
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onEnded { value in
-                                handleChartTap(at: value.location, in: geometry, chartProxy: chartProxy)
+                                handleChartTap(at: value.location, geometry: geometry)
                             }
                     )
             }
-        }
+        )
     }
     
     private var standardChart: some View {
@@ -388,9 +402,19 @@ struct ProgressChartsView: View {
                 )
                 .cornerRadius(12)
         }
-        .onTapGesture { location in
-            handleChartTap(at: location)
-        }
+        .overlay(
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onEnded { value in
+                                handleChartTap(at: value.location, geometry: geometry)
+                            }
+                    )
+            }
+        )
     }
     
     private var chartLegend: some View {
@@ -443,105 +467,203 @@ struct ProgressChartsView: View {
     }
     
     private func dataPointDetail(for point: ExerciseProgressDataPoint) -> some View {
-        VStack(spacing: 4) {
+        let setsForDate = viewModel.getSetsForDate(point.date)
+        
+        return VStack(spacing: 8) {
+            // Header
             HStack {
-                Text("📅 \(point.date, format: .dateTime.month(.abbreviated).day().year())")
-                    .font(.caption)
-                    .fontWeight(.medium)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("📅 \(point.date, format: .dateTime.month(.abbreviated).day().year())")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text("\(userDefaults.selectedExercise)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 
                 Spacer()
                 
                 Button("✕") {
                     selectedDataPoint = nil
                 }
-                .font(.caption)
+                .font(.title3)
                 .foregroundColor(.secondary)
+                .padding(4)
             }
             
+            Divider()
+            
+            // Summary Stats
             HStack(spacing: Constants.UI.Spacing.medium) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Avg Weight")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text(String(format: "%.1f %@", point.averageWeight, viewModel.weightDisplayUnit))
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                }
+                StatMiniCard(title: "Avg Weight", value: String(format: "%.1f %@", point.averageWeight, viewModel.weightDisplayUnit), color: .blue)
+                StatMiniCard(title: "Avg Reps", value: String(format: "%.1f", point.averageReps), color: .orange)
+                StatMiniCard(title: "Total Sets", value: "\(point.setCount)", color: .green)
+                StatMiniCard(title: "Est 1RM", value: String(format: "%.1f %@", point.estimated1RM, viewModel.weightDisplayUnit), color: .purple)
+            }
+            
+            if !setsForDate.isEmpty {
+                Divider()
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Avg Reps")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text(String(format: "%.1f", point.averageReps))
+                // Individual Sets
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Individual Sets")
                         .font(.caption)
                         .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 4) {
+                        // Header
+                        Text("Set")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        Text("Weight")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        Text("Reps")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        Text("1RM")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        
+                        // Individual sets data
+                        ForEach(Array(setsForDate.enumerated()), id: \.offset) { index, set in
+                            Text("\(index + 1)")
+                                .font(.caption2)
+                                .foregroundColor(.primary)
+                            
+                            Text(String(format: "%.1f", set.weight))
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            
+                            Text(set.reps)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            
+                            Text(String(format: "%.0f", set.estimated1RM))
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Sets")
+            }
+            
+            // Phase indicator
+            HStack {
+                Spacer()
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(point.isFromCuttingPhase ? .red : .blue)
+                        .frame(width: 6, height: 6)
+                    Text(point.isFromCuttingPhase ? "Cutting Phase" : "Bulking Phase")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text("\(point.setCount)")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Phase")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text(point.isFromCuttingPhase ? "Cutting" : "Bulking")
-                        .font(.caption)
-                        .fontWeight(.semibold)
                         .foregroundColor(point.isFromCuttingPhase ? .red : .blue)
                 }
-                
                 Spacer()
             }
         }
-        .padding(.horizontal, Constants.UI.Padding.small)
-        .padding(.vertical, 6)
+        .padding(Constants.UI.Padding.medium)
         .background(Color(.systemBackground))
-        .cornerRadius(8)
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
     
     // MARK: - Helper Methods
     
-    private func handleChartTap(at location: CGPoint, in geometry: GeometryProxy, chartProxy: ChartProxy) {
-        let frame = geometry[chartProxy.plotAreaFrame]
-        let origin = geometry[chartProxy.plotAreaFrame].origin
+    private func handleChartTap(at location: CGPoint, geometry: GeometryProxy) {
+        guard !viewModel.chartData.isEmpty else { 
+            print("No chart data available")
+            return 
+        }
+        
+        let chartFrame = geometry.frame(in: .local)
+        
+        // Account for axis margins - charts typically have margins for labels
+        let leftMargin: CGFloat = 40  // Space for Y-axis labels
+        let rightMargin: CGFloat = 20 // Right padding
+        let topMargin: CGFloat = 20   // Top padding
+        let bottomMargin: CGFloat = 40 // Space for X-axis labels
+        
+        // Calculate the actual plot area
+        let plotAreaX = leftMargin
+        let plotAreaWidth = chartFrame.width - leftMargin - rightMargin
+        let plotAreaY = topMargin
+        let plotAreaHeight = chartFrame.height - topMargin - bottomMargin
+        
+        // Check if touch is within the plot area
+        guard location.x >= plotAreaX && location.x <= plotAreaX + plotAreaWidth &&
+              location.y >= plotAreaY && location.y <= plotAreaY + plotAreaHeight else {
+            print("Touch outside plot area at: \(location)")
+            return
+        }
         
         // Calculate relative position within the plot area
-        let relativeX = (location.x - origin.x) / frame.width
+        let relativeX = (location.x - plotAreaX) / plotAreaWidth
         
-        guard !viewModel.chartData.isEmpty, relativeX >= 0, relativeX <= 1 else { return }
+        print("Chart frame: \(chartFrame)")
+        print("Plot area: x=\(plotAreaX), width=\(plotAreaWidth)")
+        print("Tapped at: \(location), relative: \(relativeX)")
+        
+        // Ensure we're within bounds
+        guard relativeX >= 0 && relativeX <= 1 else { 
+            print("Relative X outside bounds: \(relativeX)")
+            return 
+        }
         
         // Find the closest data point
-        let dataIndex = Int(relativeX * CGFloat(viewModel.chartData.count - 1))
-        let clampedIndex = max(0, min(dataIndex, viewModel.chartData.count - 1))
+        let dataCount = viewModel.chartData.count
+        guard dataCount > 0 else { return }
         
-        selectedDataPoint = viewModel.chartData[clampedIndex]
+        // For better accuracy, find the closest point by calculating distance to each
+        var closestIndex = 0
+        var minDistance: CGFloat = CGFloat.greatestFiniteMagnitude
+        
+        for (index, _) in viewModel.chartData.enumerated() {
+            let dataPointX = CGFloat(index) / CGFloat(dataCount - 1)
+            let distance = abs(dataPointX - relativeX)
+            
+            if distance < minDistance {
+                minDistance = distance
+                closestIndex = index
+            }
+        }
+        
+        let dataPoint = viewModel.chartData[closestIndex]
+        selectedDataPoint = dataPoint
+        
+        print("Selected data point \(closestIndex) for date: \(dataPoint.date)")
         
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
     }
     
-    // Add fallback for standard charts
-    private func handleChartTap(at location: CGPoint) {
-        // Simple fallback for standard charts
-        let chartWidth: CGFloat = 280
-        let relativeX = location.x / chartWidth
-        
+    
+    private func handleChartTapFallback(at location: CGPoint) {
         guard !viewModel.chartData.isEmpty else { return }
         
-        let dataIndex = Int(relativeX * CGFloat(viewModel.chartData.count))
-        let clampedIndex = max(0, min(dataIndex, viewModel.chartData.count - 1))
+        // Fallback to old method
+        let chartWidth: CGFloat = 280
+        let relativeX = location.x / chartWidth
+        guard relativeX >= 0 && relativeX <= 1 else { return }
         
+        let dataIndex = Int(relativeX * CGFloat(viewModel.chartData.count - 1))
+        let clampedIndex = max(0, min(dataIndex, viewModel.chartData.count - 1))
         selectedDataPoint = viewModel.chartData[clampedIndex]
         
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -607,6 +729,31 @@ struct ProgressChartsView: View {
 }
 
 // MARK: - Supporting Views
+
+struct StatMiniCard: View {
+    let title: String
+    let value: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Text(value)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(color)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.1))
+        .cornerRadius(6)
+    }
+}
 
 struct StatCard: View {
     let title: String
