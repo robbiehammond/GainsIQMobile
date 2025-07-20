@@ -57,6 +57,16 @@ struct MainTabView: View {
             .onAppear {
                 userDefaults.loadSettings()
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Logout") {
+                        Task {
+                            await authViewModel.logout()
+                        }
+                    }
+                    .foregroundColor(.red)
+                }
+            }
         }
     }
 }
