@@ -9,7 +9,7 @@ class ProgressViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedTimeRange: ChartTimeRange = .sixMonths
-    @Published var chartType: ProgressChartType = .estimated1RM
+    @Published var chartType: ProgressChartType = .combined
     
     private let apiClient: GainsIQAPIClient
     private let userDefaults = UserDefaultsManager.shared
@@ -155,6 +155,7 @@ class ProgressViewModel: ObservableObject {
                 volume: Double(totalVolume),
                 maxWeight: Double(maxWeight),
                 averageWeight: Double(averageWeight),
+                averageReps: Double(averageReps),
                 estimated1RM: Double(estimated1RM),
                 setCount: setsForDate.count,
                 isFromCuttingPhase: isFromCuttingPhase
@@ -173,6 +174,11 @@ class ProgressViewModel: ObservableObject {
             values = chartData.map { $0.averageWeight }
         case .estimated1RM:
             values = chartData.map { $0.estimated1RM }
+        case .combined:
+            // For combined chart, use the larger range of weight and reps
+            let weights = chartData.map { $0.averageWeight }
+            let reps = chartData.map { $0.averageReps }
+            values = weights + reps
         }
         
         let minValue = values.min() ?? 0
@@ -215,6 +221,8 @@ class ProgressViewModel: ObservableObject {
             return "Average Weight Over Time"
         case .estimated1RM:
             return "Estimated 1RM Over Time"
+        case .combined:
+            return "Weight & Reps Over Time"
         }
     }
     
@@ -222,6 +230,8 @@ class ProgressViewModel: ObservableObject {
         switch chartType {
         case .maxWeight, .averageWeight, .estimated1RM:
             return "Weight (\(weightDisplayUnit))"
+        case .combined:
+            return "Weight (\(weightDisplayUnit)) / Reps"
         }
     }
     
@@ -260,6 +270,9 @@ class ProgressViewModel: ObservableObject {
         case .estimated1RM:
             improvement = last.estimated1RM - first.estimated1RM
             label = "estimated 1RM"
+        case .combined:
+            improvement = last.averageWeight - first.averageWeight
+            label = "average weight"
         }
         
         let sign = improvement >= 0 ? "+" : ""
@@ -273,6 +286,7 @@ enum ProgressChartType: String, CaseIterable {
     case maxWeight = "Max Weight"
     case averageWeight = "Average Weight"
     case estimated1RM = "Estimated 1RM"
+    case combined = "Weight & Reps"
     
     var displayName: String {
         return rawValue
@@ -284,6 +298,7 @@ struct ExerciseProgressDataPoint {
     let volume: Double
     let maxWeight: Double
     let averageWeight: Double
+    let averageReps: Double
     let estimated1RM: Double
     let setCount: Int
     let isFromCuttingPhase: Bool
