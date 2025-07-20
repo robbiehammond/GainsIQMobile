@@ -309,22 +309,6 @@ struct WorkoutTrackingView: View {
                 }
                 .disabled(viewModel.isLoading)
                 
-                Button(action: {
-                    Task {
-                        await viewModel.generateAnalysis()
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "brain.head.profile")
-                        Text("Generate Analysis")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.purple)
-                    .foregroundColor(.white)
-                    .cornerRadius(Constants.UI.cornerRadius)
-                }
-                .disabled(viewModel.isLoading)
             }
         }
     }

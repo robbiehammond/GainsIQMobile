@@ -197,19 +197,6 @@ class GainsIQAPIClient: ObservableObject {
         return try await performRequest(request, expecting: WeightTrend.self)
     }
     
-    // MARK: - Analysis Endpoints
-    
-    func generateAnalysis() async throws -> String {
-        let request = try await createRequest(endpoint: "/analysis", method: .POST)
-        let response: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
-        return response.message
-    }
-    
-    func getAnalysis() async throws -> Analysis {
-        let request = try await createRequest(endpoint: "/analysis", method: .GET)
-        let response: AnalysisResponse = try await performRequest(request, expecting: AnalysisResponse.self)
-        return response.toAnalysis()
-    }
 }
 
 // MARK: - HTTP Method Enum

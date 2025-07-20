@@ -45,13 +45,6 @@ struct MainTabView: View {
                     Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 .tag(3)
-            
-            // Analysis Tab
-            AnalysisView(apiClient: authViewModel.currentAPIClient)
-                .tabItem {
-                    Label("Analysis", systemImage: "brain.head.profile")
-                }
-                .tag(4)
             }
             .accentColor(.blue)
             .onAppear {

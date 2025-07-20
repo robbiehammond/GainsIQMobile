@@ -145,20 +145,6 @@ class WorkoutViewModel: ObservableObject {
         isLoading = false
     }
     
-    func generateAnalysis() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            let message = try await apiClient.generateAnalysis()
-            successMessage = message
-            showingSuccessMessage = true
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        
-        isLoading = false
-    }
     
     // MARK: - Private Methods
     

@@ -11,7 +11,6 @@ GainsIQMobile/
 │   ├── Exercise.swift              # Exercise data model
 │   ├── WorkoutSet.swift            # Workout set data model with utilities
 │   ├── WeightEntry.swift           # Weight entry data model
-│   ├── Analysis.swift              # Analysis data model
 │   ├── WeightTrend.swift           # Weight trend data model
 │   └── APIModels.swift             # API request/response models
 ├── Services/

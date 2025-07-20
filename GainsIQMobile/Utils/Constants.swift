@@ -182,7 +182,6 @@ struct Constants {
     // MARK: - Feature Flags
     
     struct FeatureFlags {
-        static let enableAnalysis = true
         static let enableNotifications = true
         static let enableHaptics = true
         static let enableCharts = true
@@ -221,7 +220,6 @@ struct Constants {
         static let exerciseDeleted = "Exercise deleted successfully!"
         static let setDeleted = "Set deleted successfully!"
         static let setEdited = "Set updated successfully!"
-        static let analysisGenerated = "Analysis generated successfully!"
         static let dataExported = "Data exported successfully!"
         static let settingsSaved = "Settings saved successfully!"
     }
