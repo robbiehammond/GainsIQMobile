@@ -69,8 +69,33 @@ class GainsIQAPIClient: ObservableObject {
             }
             
             do {
+                // Handle empty data case for array types
+                if data.isEmpty {
+                    if type == [WorkoutSet].self {
+                        return [] as! T
+                    } else if type == [String].self {
+                        return [] as! T
+                    }
+                }
+                
+                // Handle null response for array types
+                if let dataString = String(data: data, encoding: .utf8), dataString == "null" {
+                    if type == [WorkoutSet].self {
+                        return [] as! T
+                    } else if type == [String].self {
+                        return [] as! T
+                    }
+                }
+                
                 return try JSONDecoder().decode(type, from: data)
             } catch {
+                // For array types, if decoding fails, return empty array
+                if type == [WorkoutSet].self {
+                    return [] as! T
+                } else if type == [String].self {
+                    return [] as! T
+                }
+                
                 throw APIError.decodingError(error)
             }
         } catch {

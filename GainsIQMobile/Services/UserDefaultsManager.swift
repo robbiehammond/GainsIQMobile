@@ -216,7 +216,6 @@ enum ChartTimeRange: String, CaseIterable {
         }
     }
     
-    // TODO: Mac builds get preprod, phone builds get prod
     var timeInterval: TimeInterval {
         switch self {
         case .oneWeek:
