@@ -119,17 +119,17 @@ extension WeightTrend {
         weeklyRate: 0.05
     )
     
-    /// Create a WeightTrend from Kalman filter analysis
-    static func from(analysis: WeightTrendAnalysis) -> WeightTrend {
+    /// Create a WeightTrend from EMA analysis
+    static func from(emaAnalysis: WeightEMAAnalysis) -> WeightTrend {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         
         return WeightTrend(
             date: dateFormatter.string(from: Date()),
-            slope: analysis.currentRate,
-            confidence: analysis.confidence,
-            filteredWeight: analysis.currentWeight,
-            weeklyRate: analysis.weeklyRate
+            slope: emaAnalysis.slope,
+            confidence: emaAnalysis.confidence,
+            filteredWeight: emaAnalysis.currentWeight,
+            weeklyRate: emaAnalysis.weeklyRate
         )
     }
 }

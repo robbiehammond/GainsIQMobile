@@ -121,16 +121,16 @@ class WeightViewModel: ObservableObject {
         }
     }
     
-    /// Calculate weight trend using local Kalman filter analysis
+    /// Calculate weight trend using exponential moving average
     private func calculateLocalWeightTrend() -> WeightTrend? {
         guard !weightEntries.isEmpty else { return nil }
         
-        // Use Kalman filter to analyze the weight data
-        guard let analysis = WeightKalmanFilter.analyzeWeightData(weightEntries, recencyWeightingFactor: 0.7) else {
+        // Use exponential moving average to analyze the weight data
+        guard let analysis = WeightExponentialMovingAverage.analyzeWeightData(weightEntries, alpha: 0.25) else {
             return nil
         }
         
-        return WeightTrend.from(analysis: analysis)
+        return WeightTrend.from(emaAnalysis: analysis)
     }
     
     private func convertToPounds(_ weight: Float) -> Float {
@@ -205,8 +205,8 @@ class WeightViewModel: ObservableObject {
         let futureEndTime = now.addingTimeInterval(30 * 24 * 60 * 60) // 30 days ahead
         let futureRange = now...futureEndTime
         
-        // If we have Kalman analysis, use it for projection
-        if let analysis = WeightKalmanFilter.analyzeWeightData(weightEntries, recencyWeightingFactor: 0.7) {
+        // If we have EMA analysis, use it for projection
+        if let analysis = WeightExponentialMovingAverage.analyzeWeightData(weightEntries, alpha: 0.25) {
             let trendPoints = analysis.generateTrendLine(for: futureRange)
             return trendPoints.map { (date, weight) in
                 ChartDataPoint(date: date, value: weight, timestamp: date.unixTimestamp)
@@ -223,17 +223,17 @@ class WeightViewModel: ObservableObject {
         }
     }
     
-    /// Get filtered weight data for smoother charting (historical data only)
+    /// Get smoothed weight data for smoother charting (historical data only)
     var filteredChartData: [ChartDataPoint] {
-        guard let analysis = WeightKalmanFilter.analyzeWeightData(displayWeightEntries, recencyWeightingFactor: 0.7) else {
+        guard let analysis = WeightExponentialMovingAverage.analyzeWeightData(displayWeightEntries, alpha: 0.25) else {
             return []
         }
         
-        let basePoints = zip(analysis.filteredWeights, analysis.timestamps).map { (weight, timestamp) in
+        let basePoints = zip(analysis.smoothedWeights, analysis.timestamps).map { (weight, timestamp) in
             ChartDataPoint(
                 date: Date(timeIntervalSince1970: TimeInterval(timestamp)),
                 value: weight,
-                timestamp: Int64(timestamp)
+                timestamp: timestamp
             )
         }.filter { dataPoint in
             // Filter to selected time range and only show historical data (not future)
