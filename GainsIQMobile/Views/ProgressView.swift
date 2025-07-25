@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import DGCharts
 
 struct ProgressChartsView: View {
     @StateObject private var viewModel: ProgressViewModel
@@ -262,79 +263,13 @@ struct ProgressChartsView: View {
     // MARK: - Chart Views
     
     private var combinedChart: some View {
-        Chart(viewModel.chartData, id: \.date) { dataPoint in
-            // Bar chart for normalized weight
-            BarMark(
-                x: .value("Date", dataPoint.date),
-                y: .value("Weight", normalizedWeight(dataPoint.averageWeight))
-            )
-            .foregroundStyle(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        dataPoint.isFromCuttingPhase ? .red.opacity(0.7) : .blue.opacity(0.7),
-                        dataPoint.isFromCuttingPhase ? .red.opacity(0.3) : .blue.opacity(0.3)
-                    ]),
-                    startPoint: .bottom,
-                    endPoint: .top
-                )
-            )
-            .opacity(selectedDataPoint == nil || (selectedDataPoint != nil && Calendar.current.isDate(selectedDataPoint!.date, inSameDayAs: dataPoint.date)) ? 1.0 : 0.5)
-            
-            // Line chart for normalized reps
-            LineMark(
-                x: .value("Date", dataPoint.date),
-                y: .value("Reps", normalizedReps(dataPoint.averageReps))
-            )
-            .foregroundStyle(.orange)
-            .lineStyle(StrokeStyle(lineWidth: 3))
-            .symbol(.circle)
-            .symbolSize(selectedDataPoint != nil && Calendar.current.isDate(selectedDataPoint!.date, inSameDayAs: dataPoint.date) ? 80 : 60)
-            .opacity(selectedDataPoint == nil || (selectedDataPoint != nil && Calendar.current.isDate(selectedDataPoint!.date, inSameDayAs: dataPoint.date)) ? 1.0 : 0.5)
-        }
-        .frame(height: 280)
-        .chartXScale(domain: viewModel.chartTimeRange)
-        .chartYScale(domain: 0...100)
-        .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 4]))
-                    .foregroundStyle(.secondary.opacity(0.3))
-                AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .chartYAxis {
-            AxisMarks(values: [0, 25, 50, 75, 100]) { _ in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 4]))
-                    .foregroundStyle(.secondary.opacity(0.3))
-            }
-        }
-        .chartPlotStyle { plotArea in
-            plotArea
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(.systemGray6).opacity(0.1),
-                            Color(.systemGray6).opacity(0.3)
-                        ]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .cornerRadius(12)
-        }
-        .overlay(
-            GeometryReader { geometry in
-                Rectangle()
-                    .fill(Color.clear)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onEnded { value in
-                                handleChartTap(at: value.location, geometry: geometry)
-                            }
-                    )
-            }
+        CombinedChartView(
+            chartData: viewModel.chartData,
+            selectedDataPoint: $selectedDataPoint,
+            userDefaults: userDefaults
         )
+        .frame(height: 280)
+        .cornerRadius(12)
     }
     
     private var standardChart: some View {
@@ -422,24 +357,35 @@ struct ProgressChartsView: View {
             if viewModel.chartType == .combined {
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(LinearGradient(
-                            gradient: Gradient(colors: [.blue.opacity(0.7), .blue.opacity(0.3)]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ))
+                        .fill(Color.blue.opacity(0.7))
                         .frame(width: 12, height: 8)
-                    Text("Avg Weight")
+                    Text("Weight (Left Axis)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 
                 HStack(spacing: 4) {
                     Circle()
-                        .stroke(.orange, lineWidth: 2)
-                        .fill(.orange.opacity(0.3))
+                        .fill(.orange)
                         .frame(width: 8, height: 8)
-                    Text("Avg Reps")
+                    Text("Reps (Right Axis)")
                         .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.red.opacity(0.7))
+                        .frame(width: 6, height: 6)
+                    Text("Cutting")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Circle()
+                        .fill(Color.blue.opacity(0.7))
+                        .frame(width: 6, height: 6)
+                    Text("Bulking")
+                        .font(.caption2)
                         .foregroundColor(.secondary)
                 }
             } else {
@@ -468,6 +414,7 @@ struct ProgressChartsView: View {
     
     private func dataPointDetail(for point: ExerciseProgressDataPoint) -> some View {
         let setsForDate = viewModel.getSetsForDate(point.date)
+        print("Showing detail for point: \(point.date), found \(setsForDate.count) sets")
         
         return VStack(spacing: 8) {
             // Header
@@ -670,35 +617,6 @@ struct ProgressChartsView: View {
         impactFeedback.impactOccurred()
     }
     
-    // Normalize weight values to 0-100 scale based on min/max in dataset
-    private func normalizedWeight(_ weight: Double) -> Double {
-        guard !viewModel.chartData.isEmpty else { return 50 }
-        
-        let weights = viewModel.chartData.map { $0.averageWeight }
-        let minWeight = weights.min() ?? 0
-        let maxWeight = weights.max() ?? weight
-        
-        guard maxWeight > minWeight else { return 50 }
-        
-        // Normalize to 20-80 range to leave room for reps line
-        let normalizedValue = ((weight - minWeight) / (maxWeight - minWeight)) * 60 + 20
-        return normalizedValue
-    }
-    
-    // Normalize reps values to 0-100 scale based on min/max in dataset
-    private func normalizedReps(_ reps: Double) -> Double {
-        guard !viewModel.chartData.isEmpty else { return 50 }
-        
-        let allReps = viewModel.chartData.map { $0.averageReps }
-        let minReps = allReps.min() ?? 0
-        let maxReps = allReps.max() ?? reps
-        
-        guard maxReps > minReps else { return 50 }
-        
-        // Normalize to 20-80 range to match weight normalization
-        let normalizedValue = ((reps - minReps) / (maxReps - minReps)) * 60 + 20
-        return normalizedValue
-    }
     
     private func chartValue(for dataPoint: ExerciseProgressDataPoint) -> Double {
         switch viewModel.chartType {
@@ -785,6 +703,197 @@ struct StatCard: View {
         .padding(Constants.UI.Padding.small)
         .background(Color(.systemBackground))
         .cornerRadius(Constants.UI.cornerRadius / 2)
+    }
+}
+
+// MARK: - Combined Chart Implementation
+
+struct CombinedChartView: UIViewRepresentable {
+    let chartData: [ExerciseProgressDataPoint]
+    @Binding var selectedDataPoint: ExerciseProgressDataPoint?
+    let userDefaults: UserDefaultsManager
+    
+    func makeUIView(context: Context) -> DGCharts.CombinedChartView {
+        let chart = DGCharts.CombinedChartView()
+        configureChart(chart)
+        chart.delegate = context.coordinator
+        return chart
+    }
+    
+    func updateUIView(_ uiView: DGCharts.CombinedChartView, context: Context) {
+        updateChartData(uiView)
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    private func configureChart(_ chart: DGCharts.CombinedChartView) {
+        // General chart configuration
+        chart.backgroundColor = UIColor.systemGray6
+        chart.gridBackgroundColor = UIColor.systemBackground
+        chart.borderColor = UIColor.systemGray4
+        chart.borderLineWidth = 1.0
+        chart.drawGridBackgroundEnabled = true
+        chart.dragEnabled = true
+        chart.setScaleEnabled(false)
+        chart.pinchZoomEnabled = false
+        chart.highlightPerTapEnabled = true
+        chart.highlightPerDragEnabled = false
+        
+        // Configure axes
+        let xAxis = chart.xAxis
+        xAxis.labelPosition = .bottom
+        xAxis.drawGridLinesEnabled = true
+        xAxis.gridColor = UIColor.systemGray4
+        xAxis.gridLineWidth = 0.5
+        xAxis.labelTextColor = UIColor.secondaryLabel
+        xAxis.valueFormatter = DateAxisValueFormatter()
+        
+        let leftAxis = chart.leftAxis
+        leftAxis.drawGridLinesEnabled = true
+        leftAxis.gridColor = UIColor.systemGray4
+        leftAxis.gridLineWidth = 0.5
+        leftAxis.labelTextColor = UIColor.secondaryLabel
+        leftAxis.axisMinimum = 0
+        
+        let rightAxis = chart.rightAxis
+        rightAxis.drawGridLinesEnabled = false
+        rightAxis.drawLabelsEnabled = true
+        rightAxis.labelTextColor = UIColor.systemOrange
+        rightAxis.axisMinimum = 0
+        
+        // Configure legend
+        let legend = chart.legend
+        legend.horizontalAlignment = .left
+        legend.verticalAlignment = .bottom
+        legend.orientation = .horizontal
+        legend.drawInside = false
+        legend.form = .line
+        legend.formSize = 12
+        legend.textColor = UIColor.label
+    }
+    
+    private func updateChartData(_ chart: DGCharts.CombinedChartView) {
+        guard !chartData.isEmpty else {
+            chart.data = nil
+            return
+        }
+        
+        print("Updating chart with \(chartData.count) data points:")
+        chartData.enumerated().forEach { index, point in
+            print("Index \(index): \(point.date), weight: \(point.averageWeight), reps: \(point.averageReps)")
+        }
+        
+        let combinedData = DGCharts.CombinedChartData()
+        
+        // Create bar data for average weight
+        var barEntries: [BarChartDataEntry] = []
+        var lineEntries: [ChartDataEntry] = []
+        
+        for (index, dataPoint) in chartData.enumerated() {
+            let xValue = Double(index)
+            
+            // Bar entry for weight
+            let barEntry = BarChartDataEntry(x: xValue, y: dataPoint.averageWeight)
+            barEntries.append(barEntry)
+            
+            // Line entry for reps
+            let lineEntry = ChartDataEntry(x: xValue, y: dataPoint.averageReps)
+            lineEntries.append(lineEntry)
+        }
+        
+        // Configure bar data set (Weight)
+        let barDataSet = BarChartDataSet(entries: barEntries, label: "Avg Weight (\(userDefaults.weightUnit.abbreviation))")
+        barDataSet.colors = chartData.map { dataPoint in
+            dataPoint.isFromCuttingPhase ? 
+                UIColor.systemRed.withAlphaComponent(0.7) : 
+                UIColor.systemBlue.withAlphaComponent(0.7)
+        }
+        barDataSet.valueTextColor = UIColor.clear // Hide values on bars
+        barDataSet.highlightEnabled = true
+        barDataSet.highlightColor = UIColor.systemYellow
+        barDataSet.highlightAlpha = 0.3
+        
+        let barData = BarChartData(dataSet: barDataSet)
+        barData.barWidth = 0.6
+        combinedData.barData = barData
+        
+        // Configure line data set (Reps)
+        let lineDataSet = LineChartDataSet(entries: lineEntries, label: "Avg Reps")
+        lineDataSet.axisDependency = .right
+        lineDataSet.colors = [UIColor.systemOrange]
+        lineDataSet.lineWidth = 3.0
+        lineDataSet.circleRadius = 5.0
+        lineDataSet.circleHoleRadius = 3.0
+        lineDataSet.circleColors = [UIColor.systemOrange]
+        lineDataSet.circleHoleColor = UIColor.systemBackground
+        lineDataSet.valueTextColor = UIColor.clear // Hide values on points
+        lineDataSet.mode = .cubicBezier // Smooth line
+        lineDataSet.cubicIntensity = 0.2
+        lineDataSet.highlightEnabled = true
+        lineDataSet.highlightColor = UIColor.systemYellow
+        lineDataSet.highlightLineWidth = 2.0
+        
+        let lineData = LineChartData(dataSet: lineDataSet)
+        combinedData.lineData = lineData
+        
+        // Set up x-axis labels
+        let xAxis = chart.xAxis
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MM/dd"
+        xAxis.valueFormatter = IndexAxisValueFormatter(values: chartData.map { 
+            dateFormatter.string(from: $0.date)
+        })
+        xAxis.granularity = 1
+        xAxis.labelCount = min(6, chartData.count)
+        
+        // Auto-scale axes
+        let weights = chartData.map { $0.averageWeight }
+        let reps = chartData.map { $0.averageReps }
+        
+        chart.leftAxis.axisMaximum = (weights.max() ?? 100) * 1.1
+        chart.rightAxis.axisMaximum = (reps.max() ?? 20) * 1.1
+        
+        chart.data = combinedData
+        chart.animate(xAxisDuration: 0.8, yAxisDuration: 0.8)
+    }
+    
+    class Coordinator: NSObject, ChartViewDelegate {
+        let parent: CombinedChartView
+        
+        init(_ parent: CombinedChartView) {
+            self.parent = parent
+        }
+        
+        func chartValueSelected(_ chartView: ChartViewBase, entry: ChartDataEntry, highlight: Highlight) {
+            let index = Int(entry.x)
+            guard index >= 0 && index < parent.chartData.count else { 
+                print("Invalid index: \(index), chartData count: \(parent.chartData.count)")
+                return 
+            }
+            
+            let selectedPoint = parent.chartData[index]
+            parent.selectedDataPoint = selectedPoint
+            
+            print("Selected point at index \(index): \(selectedPoint.date), weight: \(selectedPoint.averageWeight), reps: \(selectedPoint.averageReps)")
+            
+            // Haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+        }
+        
+        func chartValueNothingSelected(_ chartView: ChartViewBase) {
+            parent.selectedDataPoint = nil
+        }
+    }
+}
+
+// MARK: - Custom Value Formatters
+
+class DateAxisValueFormatter: AxisValueFormatter {
+    func stringForValue(_ value: Double, axis: AxisBase?) -> String {
+        return String(format: "%.0f", value)
     }
 }
 
