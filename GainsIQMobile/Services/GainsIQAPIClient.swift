@@ -38,8 +38,16 @@ class GainsIQAPIClient: ObservableObject {
     }
     
     private func performRequest<T: Codable>(_ request: URLRequest, expecting type: T.Type) async throws -> T {
+        let startTime = Date()
+        let requestId = logRequest(request)
+        
         do {
             let (data, response) = try await session.data(for: request)
+            let duration = Date().timeIntervalSince(startTime)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                logResponse(requestId: requestId, response: httpResponse, data: data, duration: duration)
+            }
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
@@ -104,6 +112,39 @@ class GainsIQAPIClient: ObservableObject {
             }
             throw APIError.networkError(error)
         }
+    }
+    
+    // MARK: - Debug Logging
+    
+    private func logRequest(_ request: URLRequest) -> UUID {
+        let headers = request.allHTTPHeaderFields ?? [:]
+        let endpoint = request.url?.path ?? ""
+        let fullURL = request.url?.absoluteString ?? ""
+        let method = request.httpMethod ?? "UNKNOWN"
+        
+        return DebugLogger.shared.logRequest(
+            method: method,
+            endpoint: endpoint,
+            fullURL: fullURL,
+            headers: headers,
+            body: request.httpBody
+        )
+    }
+    
+    private func logResponse(requestId: UUID, response: HTTPURLResponse, data: Data, duration: TimeInterval) {
+        let headers = response.allHeaderFields.reduce(into: [String: String]()) { result, pair in
+            if let key = pair.key as? String, let value = pair.value as? String {
+                result[key] = value
+            }
+        }
+        
+        DebugLogger.shared.logResponse(
+            for: requestId,
+            statusCode: response.statusCode,
+            headers: headers,
+            body: data,
+            duration: duration
+        )
     }
     
     // MARK: - Exercise Endpoints

@@ -45,20 +45,17 @@ struct MainTabView: View {
                     Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 .tag(3)
+            
+            // Extras Tab
+            ExtrasView()
+                .tabItem {
+                    Label("Extras", systemImage: "ellipsis.circle")
+                }
+                .tag(4)
             }
             .accentColor(.blue)
             .onAppear {
                 userDefaults.loadSettings()
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Logout") {
-                        Task {
-                            await authViewModel.logout()
-                        }
-                    }
-                    .foregroundColor(.red)
-                }
             }
         }
     }
