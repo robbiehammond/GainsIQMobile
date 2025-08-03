@@ -85,11 +85,7 @@ class WorkoutViewModel: ObservableObject {
             successMessage = "Workout logged successfully!"
             showingSuccessMessage = true
             
-            // Clear form but keep exercise selected
             reps = ""
-            weight = ""
-            
-            // Exercise selection is automatically saved via UserDefaultsManager
             
         } catch {
             errorMessage = error.localizedDescription
