@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 struct APILogEntry: Identifiable {
-    let id = UUID()
+    let id: UUID
     let timestamp: Date
     let method: String
     let endpoint: String
@@ -56,6 +56,7 @@ class DebugLogger: ObservableObject {
         let queryParams = extractQueryParameters(from: fullURL)
         
         let logEntry = APILogEntry(
+            id: id,
             timestamp: Date(),
             method: method,
             endpoint: endpoint,
@@ -92,6 +93,7 @@ class DebugLogger: ObservableObject {
             if let index = self.logs.firstIndex(where: { $0.id == requestId }) {
                 let existingLog = self.logs[index]
                 let updatedLog = APILogEntry(
+                    id: existingLog.id,
                     timestamp: existingLog.timestamp,
                     method: existingLog.method,
                     endpoint: existingLog.endpoint,
@@ -105,6 +107,38 @@ class DebugLogger: ObservableObject {
                     duration: duration
                 )
                 self.logs[index] = updatedLog
+            }
+        }
+    }
+    
+    func logError(
+        method: String = "UNKNOWN",
+        endpoint: String,
+        fullURL: String = "",
+        responseBody: String?,
+        statusCode: Int? = nil,
+        error: String
+    ) {
+        let errorEndpoint = fullURL.isEmpty ? endpoint : endpoint
+        let logEntry = APILogEntry(
+            id: UUID(),
+            timestamp: Date(),
+            method: method,
+            endpoint: "\(errorEndpoint) [ERROR: \(error)]",
+            fullURL: fullURL.isEmpty ? endpoint : fullURL,
+            queryParameters: [:],
+            requestHeaders: [:],
+            requestBody: nil,
+            responseStatusCode: statusCode,
+            responseHeaders: nil,
+            responseBody: responseBody,
+            duration: nil
+        )
+        
+        DispatchQueue.main.async {
+            self.logs.insert(logEntry, at: 0)
+            if self.logs.count > self.maxLogs {
+                self.logs.removeLast()
             }
         }
     }

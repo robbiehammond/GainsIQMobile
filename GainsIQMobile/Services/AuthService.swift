@@ -34,6 +34,14 @@ class AuthService: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
+            let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
+            DebugLogger.shared.logError(
+                method: "POST",
+                endpoint: "auth/login",
+                fullURL: url.absoluteString,
+                responseBody: responseBody,
+                error: "Invalid response format - not HTTPURLResponse"
+            )
             throw APIError.invalidResponse
         }
         
@@ -49,6 +57,15 @@ class AuthService: ObservableObject {
             }
             throw APIError.badRequest("Invalid credentials")
         default:
+            let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
+            DebugLogger.shared.logError(
+                method: "POST",
+                endpoint: "auth/login",
+                fullURL: url.absoluteString,
+                responseBody: responseBody,
+                statusCode: httpResponse.statusCode,
+                error: "Invalid response format - unexpected status code \(httpResponse.statusCode)"
+            )
             throw APIError.invalidResponse
         }
         
@@ -84,6 +101,14 @@ class AuthService: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
+            let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
+            DebugLogger.shared.logError(
+                method: "POST",
+                endpoint: "auth/refresh",
+                fullURL: url.absoluteString,
+                responseBody: responseBody,
+                error: "Invalid response format - not HTTPURLResponse"
+            )
             throw APIError.invalidResponse
         }
         
@@ -93,6 +118,15 @@ class AuthService: ObservableObject {
         }
         
         guard httpResponse.statusCode == 200 else {
+            let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
+            DebugLogger.shared.logError(
+                method: "POST",
+                endpoint: "auth/refresh",
+                fullURL: url.absoluteString,
+                responseBody: responseBody,
+                statusCode: httpResponse.statusCode,
+                error: "Invalid response format - unexpected status code \(httpResponse.statusCode)"
+            )
             throw APIError.invalidResponse
         }
         

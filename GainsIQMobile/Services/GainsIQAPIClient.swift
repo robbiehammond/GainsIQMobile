@@ -50,6 +50,14 @@ class GainsIQAPIClient: ObservableObject {
             }
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
+                DebugLogger.shared.logError(
+                    method: request.httpMethod ?? "UNKNOWN",
+                    endpoint: request.url?.path ?? "unknown",
+                    fullURL: request.url?.absoluteString ?? "",
+                    responseBody: responseBody,
+                    error: "Invalid response format - not HTTPURLResponse"
+                )
                 throw APIError.invalidResponse
             }
             
@@ -73,6 +81,15 @@ class GainsIQAPIClient: ObservableObject {
                 }
                 throw APIError.serverError("Server error")
             default:
+                let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
+                DebugLogger.shared.logError(
+                    method: request.httpMethod ?? "UNKNOWN",
+                    endpoint: request.url?.path ?? "unknown",
+                    fullURL: request.url?.absoluteString ?? "",
+                    responseBody: responseBody,
+                    statusCode: httpResponse.statusCode,
+                    error: "Invalid response format - unexpected status code \(httpResponse.statusCode)"
+                )
                 throw APIError.invalidResponse
             }
             
@@ -104,6 +121,15 @@ class GainsIQAPIClient: ObservableObject {
                     return [] as! T
                 }
                 
+                let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
+                DebugLogger.shared.logError(
+                    method: request.httpMethod ?? "UNKNOWN",
+                    endpoint: request.url?.path ?? "unknown",
+                    fullURL: request.url?.absoluteString ?? "",
+                    responseBody: responseBody,
+                    statusCode: httpResponse.statusCode,
+                    error: "JSON decoding failed: \(error.localizedDescription)"
+                )
                 throw APIError.decodingError(error)
             }
         } catch {
