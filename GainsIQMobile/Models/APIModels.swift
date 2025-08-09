@@ -24,6 +24,7 @@ struct LogSetRequest: Codable {
     let sets: Int
     let weight: Float
     let isCutting: Bool?
+    let timestamp: Int64?
     
     enum CodingKeys: String, CodingKey {
         case exercise
@@ -31,6 +32,7 @@ struct LogSetRequest: Codable {
         case sets
         case weight
         case isCutting
+        case timestamp
     }
 }
 
@@ -169,12 +171,13 @@ enum APIError: Error, LocalizedError {
 // MARK: - Utility Extensions
 
 extension LogSetRequest {
-    init(exercise: String, reps: String, weight: Float, isCutting: Bool) {
+    init(exercise: String, reps: String, weight: Float, isCutting: Bool, timestamp: Int64? = nil) {
         self.exercise = exercise
         self.reps = reps
         self.sets = 1 // Default to 1 set as per the web app
         self.weight = weight
         self.isCutting = isCutting
+        self.timestamp = timestamp
     }
 }
 

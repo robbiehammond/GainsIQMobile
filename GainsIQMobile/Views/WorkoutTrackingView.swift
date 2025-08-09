@@ -256,6 +256,45 @@ struct WorkoutTrackingView: View {
                 .pickerStyle(SegmentedPickerStyle())
                 .frame(width: 200)
             }
+            
+            // Custom timestamp toggle
+            HStack {
+                Text("Custom Time")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Button(action: {
+                    viewModel.toggleTimestampPicker()
+                }) {
+                    HStack {
+                        Image(systemName: viewModel.showingTimestampPicker ? "clock.fill" : "clock")
+                        Text(viewModel.showingTimestampPicker ? "Cancel" : "Set Time")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                }
+            }
+            
+            // Timestamp picker (when enabled)
+            if viewModel.showingTimestampPicker {
+                VStack(alignment: .leading, spacing: Constants.UI.Spacing.small) {
+                    Text("Workout Time")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    DatePicker(
+                        "Workout Time",
+                        selection: Binding(
+                            get: { viewModel.customTimestamp ?? Date() },
+                            set: { viewModel.customTimestamp = $0 }
+                        ),
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .datePickerStyle(CompactDatePickerStyle())
+                    .labelsHidden()
+                }
+            }
         }
     }
     

@@ -279,8 +279,8 @@ enum HTTPMethod: String {
 
 extension GainsIQAPIClient {
     
-    func logWorkoutSet(exercise: String, reps: String, weight: Float, isCutting: Bool) async throws {
-        let setRequest = LogSetRequest(exercise: exercise, reps: reps, weight: weight, isCutting: isCutting)
+    func logWorkoutSet(exercise: String, reps: String, weight: Float, isCutting: Bool, timestamp: Int64? = nil) async throws {
+        let setRequest = LogSetRequest(exercise: exercise, reps: reps, weight: weight, isCutting: isCutting, timestamp: timestamp)
         try await logWorkoutSet(setRequest)
     }
     

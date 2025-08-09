@@ -14,6 +14,8 @@ class WorkoutViewModel: ObservableObject {
     @Published var showingAddExercise = false
     @Published var newExerciseName: String = ""
     @Published var searchText: String = ""
+    @Published var customTimestamp: Date?
+    @Published var showingTimestampPicker = false
     
     private let apiClient: GainsIQAPIClient
     private let userDefaults = UserDefaultsManager.shared
@@ -74,18 +76,23 @@ class WorkoutViewModel: ObservableObject {
         do {
             let isCutting = userDefaults.cuttingState.isCutting
             let weightInPounds = convertToPounds(weightValue)
+            let timestamp = customTimestamp?.unixTimestamp
             
-            try await apiClient.logWorkoutSet(
+            let setRequest = LogSetRequest(
                 exercise: userDefaults.selectedExercise,
                 reps: reps,
                 weight: weightInPounds,
-                isCutting: isCutting
+                isCutting: isCutting,
+                timestamp: timestamp
             )
+            
+            try await apiClient.logWorkoutSet(setRequest)
             
             successMessage = "Workout logged successfully!"
             showingSuccessMessage = true
             
             reps = ""
+            customTimestamp = nil
             
         } catch {
             errorMessage = error.localizedDescription
@@ -141,6 +148,12 @@ class WorkoutViewModel: ObservableObject {
         isLoading = false
     }
     
+    func toggleTimestampPicker() {
+        showingTimestampPicker.toggle()
+        if !showingTimestampPicker {
+            customTimestamp = nil
+        }
+    }
     
     // MARK: - Private Methods
     
