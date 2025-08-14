@@ -4,7 +4,6 @@ import SwiftUI
 @MainActor
 class ProgressViewModel: ObservableObject {
     @Published var exercises: [Exercise] = []
-    // selectedExercise is now managed by UserDefaultsManager
     @Published var workoutSets: [WorkoutSet] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -18,7 +17,6 @@ class ProgressViewModel: ObservableObject {
         if let apiClient = apiClient {
             self.apiClient = apiClient
         } else {
-            // Create a temporary AuthService for standalone usage
             let authService = AuthService()
             self.apiClient = GainsIQAPIClient(
                 baseURL: Constants.API.defaultBaseURL,
@@ -35,7 +33,7 @@ class ProgressViewModel: ObservableObject {
         let targetDate = Calendar.current.startOfDay(for: date)
         return displaySets.filter { set in
             let setDate = Calendar.current.startOfDay(for: set.date)
-            return setDate == targetDate && set.exercise == userDefaults.selectedExercise
+            return setDate == targetDate
         }
     }
     
@@ -87,6 +85,7 @@ class ProgressViewModel: ObservableObject {
     
     func changeExercise(_ exercise: String) {
         userDefaults.selectedExercise = exercise
+        print("Selected exercise: \(userDefaults.selectedExercise)")
         Task {
             await loadProgressData()
         }
@@ -128,7 +127,8 @@ class ProgressViewModel: ObservableObject {
                 weight: convertFromPounds(set.weight),
                 weightModulation: set.weightModulation
             )
-        }.sortedByDate(ascending: true)
+        }.filter { $0.exercise == userDefaults.selectedExercise }
+         .sortedByDate(ascending: true)
     }
     
     var groupedByDateSets: [Date: [WorkoutSet]] {
