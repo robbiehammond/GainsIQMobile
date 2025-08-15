@@ -270,6 +270,9 @@ struct ProgressChartsView: View {
         )
         .frame(height: 280)
         .cornerRadius(12)
+        .onChange(of: selectedDataPoint) { newSelection in
+            // This will trigger the chart to update its highlight
+        }
     }
     
     private var standardChart: some View {
@@ -290,7 +293,7 @@ struct ProgressChartsView: View {
             )
             .lineStyle(StrokeStyle(lineWidth: 3))
             .symbol(.circle)
-            .symbolSize(60)
+            .symbolSize(isDataPointSelected(dataPoint) ? 80 : 60)
             
             PointMark(
                 x: .value("Date", dataPoint.date),
@@ -299,6 +302,17 @@ struct ProgressChartsView: View {
             .foregroundStyle(dataPoint.isFromCuttingPhase ? Color.red : Color.blue)
             .symbolSize(40)
             .opacity(0)
+            
+            // Highlight ring for selected data point
+            if isDataPointSelected(dataPoint) {
+                PointMark(
+                    x: .value("Date", dataPoint.date),
+                    y: .value("Value", chartValue(for: dataPoint))
+                )
+                .foregroundStyle(.yellow)
+                .symbolSize(100)
+                .opacity(0.3)
+            }
         }
         .frame(height: 280)
         .chartXScale(domain: viewModel.chartTimeRange)
@@ -417,9 +431,19 @@ struct ProgressChartsView: View {
         print("Showing detail for point: \(point.date), found \(setsForDate.count) sets")
         
         return VStack(spacing: 8) {
-            // Header
+            // Header with navigation
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                // Left navigation button
+                Button(action: navigateToPreviousDataPoint) {
+                    Image(systemName: "chevron.left")
+                        .font(.title2)
+                        .foregroundColor(canNavigateLeft ? .blue : .gray)
+                }
+                .disabled(!canNavigateLeft)
+                
+                Spacer()
+                
+                VStack(alignment: .center, spacing: 2) {
                     Text("📅 \(point.date, format: .dateTime.month(.abbreviated).day().year())")
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -430,12 +454,21 @@ struct ProgressChartsView: View {
                 
                 Spacer()
                 
+                // Right navigation button
+                Button(action: navigateToNextDataPoint) {
+                    Image(systemName: "chevron.right")
+                        .font(.title2)
+                        .foregroundColor(canNavigateRight ? .blue : .gray)
+                }
+                .disabled(!canNavigateRight)
+                
+                // Close button
                 Button("✕") {
                     selectedDataPoint = nil
                 }
                 .font(.title3)
                 .foregroundColor(.secondary)
-                .padding(4)
+                .padding(.leading, 8)
             }
             
             Divider()
@@ -531,6 +564,55 @@ struct ProgressChartsView: View {
     }
     
     // MARK: - Helper Methods
+    
+    private func isDataPointSelected(_ dataPoint: ExerciseProgressDataPoint) -> Bool {
+        guard let selectedPoint = selectedDataPoint else { return false }
+        return Calendar.current.isDate(dataPoint.date, inSameDayAs: selectedPoint.date)
+    }
+    
+    private var canNavigateLeft: Bool {
+        guard let selectedPoint = selectedDataPoint,
+              let currentIndex = viewModel.chartData.firstIndex(where: { $0.date == selectedPoint.date }) else {
+            return false
+        }
+        return currentIndex > 0
+    }
+    
+    private var canNavigateRight: Bool {
+        guard let selectedPoint = selectedDataPoint,
+              let currentIndex = viewModel.chartData.firstIndex(where: { $0.date == selectedPoint.date }) else {
+            return false
+        }
+        return currentIndex < viewModel.chartData.count - 1
+    }
+    
+    private func navigateToPreviousDataPoint() {
+        guard let selectedPoint = selectedDataPoint,
+              let currentIndex = viewModel.chartData.firstIndex(where: { $0.date == selectedPoint.date }),
+              currentIndex > 0 else {
+            return
+        }
+        
+        selectedDataPoint = viewModel.chartData[currentIndex - 1]
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func navigateToNextDataPoint() {
+        guard let selectedPoint = selectedDataPoint,
+              let currentIndex = viewModel.chartData.firstIndex(where: { $0.date == selectedPoint.date }),
+              currentIndex < viewModel.chartData.count - 1 else {
+            return
+        }
+        
+        selectedDataPoint = viewModel.chartData[currentIndex + 1]
+        
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+    }
     
     private func handleChartTap(at location: CGPoint, geometry: GeometryProxy) {
         guard !viewModel.chartData.isEmpty else { 
@@ -722,6 +804,7 @@ struct CombinedChartView: UIViewRepresentable {
     
     func updateUIView(_ uiView: DGCharts.CombinedChartView, context: Context) {
         updateChartData(uiView)
+        updateSelection(uiView)
     }
     
     func makeCoordinator() -> Coordinator {
@@ -857,6 +940,18 @@ struct CombinedChartView: UIViewRepresentable {
         
         chart.data = combinedData
         chart.animate(xAxisDuration: 0.8, yAxisDuration: 0.8)
+    }
+    
+    private func updateSelection(_ chart: DGCharts.CombinedChartView) {
+        guard let selectedPoint = selectedDataPoint,
+              let index = chartData.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: selectedPoint.date) }) else {
+            chart.highlightValues(nil)
+            return
+        }
+        
+        // Highlight the selected data point
+        let highlight = Highlight(x: Double(index), dataSetIndex: 0, stackIndex: -1)
+        chart.highlightValues([highlight])
     }
     
     class Coordinator: NSObject, ChartViewDelegate {

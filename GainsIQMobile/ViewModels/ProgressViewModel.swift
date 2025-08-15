@@ -301,7 +301,7 @@ enum ProgressChartType: String, CaseIterable {
     }
 }
 
-struct ExerciseProgressDataPoint {
+struct ExerciseProgressDataPoint: Equatable {
     let date: Date
     let volume: Double
     let maxWeight: Double
