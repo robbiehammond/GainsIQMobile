@@ -27,6 +27,10 @@ class AuthViewModel: ObservableObject {
         return apiClient
     }
     
+    var currentAuthService: AuthService {
+        return authService
+    }
+    
     // MARK: - Public Methods
     
     func login(username: String, password: String) async throws {
@@ -35,6 +39,10 @@ class AuthViewModel: ObservableObject {
     
     func logout() async {
         await authService.logout()
+    }
+    
+    func refreshToken() async throws {
+        _ = try await authService.refreshAccessToken()
     }
     
     // MARK: - Private Methods

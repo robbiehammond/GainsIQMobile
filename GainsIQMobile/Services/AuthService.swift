@@ -4,15 +4,18 @@ import Security
 class AuthService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentAccessToken: String?
+    @Published var lastTokenRefresh: Date?
     
     private let keychainService = "com.gainsiq.mobile"
     private let accessTokenKey = "access_token"
     private let refreshTokenKey = "refresh_token"
     private let idTokenKey = "id_token"
     private let tokenExpiryKey = "token_expiry"
+    private let lastRefreshKey = "last_token_refresh"
     
     init() {
         checkAuthenticationStatus()
+        loadLastTokenRefresh()
     }
     
     // MARK: - Public Methods
@@ -132,6 +135,7 @@ class AuthService: ObservableObject {
         
         let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
         try await storeTokens(authResponse)
+        updateLastTokenRefresh()
         
         DispatchQueue.main.async {
             self.currentAccessToken = authResponse.accessToken
@@ -182,6 +186,7 @@ class AuthService: ObservableObject {
         try storeInKeychain(key: refreshTokenKey, value: authResponse.refreshToken)
         try storeInKeychain(key: idTokenKey, value: authResponse.idToken)
         try storeInKeychain(key: tokenExpiryKey, value: String(expiryTime.timeIntervalSince1970))
+        updateLastTokenRefresh()
     }
     
     private func getAccessToken() -> String? {
@@ -207,6 +212,28 @@ class AuthService: ObservableObject {
         deleteFromKeychain(key: refreshTokenKey)
         deleteFromKeychain(key: idTokenKey)
         deleteFromKeychain(key: tokenExpiryKey)
+        deleteFromKeychain(key: lastRefreshKey)
+        DispatchQueue.main.async {
+            self.lastTokenRefresh = nil
+        }
+    }
+    
+    private func updateLastTokenRefresh() {
+        let now = Date()
+        let timestamp = String(now.timeIntervalSince1970)
+        try? storeInKeychain(key: lastRefreshKey, value: timestamp)
+        DispatchQueue.main.async {
+            self.lastTokenRefresh = now
+        }
+    }
+    
+    private func loadLastTokenRefresh() {
+        if let timestampString = getFromKeychain(key: lastRefreshKey),
+           let timestamp = Double(timestampString) {
+            DispatchQueue.main.async {
+                self.lastTokenRefresh = Date(timeIntervalSince1970: timestamp)
+            }
+        }
     }
     
     // MARK: - Keychain Helpers

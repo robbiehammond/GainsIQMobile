@@ -37,7 +37,7 @@ class GainsIQAPIClient: ObservableObject {
         return request
     }
     
-    private func performRequest<T: Codable>(_ request: URLRequest, expecting type: T.Type) async throws -> T {
+    private func performRequest<T: Codable>(_ request: URLRequest, expecting type: T.Type, isRetry: Bool = false) async throws -> T {
         let startTime = Date()
         let requestId = logRequest(request)
         
@@ -71,6 +71,10 @@ class GainsIQAPIClient: ObservableObject {
             case 400...499:
                 if let errorData = try? JSONDecoder().decode([String: String].self, from: data),
                    let errorMessage = errorData["error"] {
+                    // Check if this is a refresh token error that should trigger token refresh
+                    if errorMessage.contains("refresh_token is required") && !isRetry {
+                        throw APIError.unauthorized
+                    }
                     throw APIError.badRequest(errorMessage)
                 }
                 throw APIError.badRequest("Client error")
@@ -133,6 +137,25 @@ class GainsIQAPIClient: ObservableObject {
                 throw APIError.decodingError(error)
             }
         } catch {
+            if let apiError = error as? APIError, case .unauthorized = apiError, !isRetry {
+                // If we get an unauthorized error and this isn't already a retry, 
+                // try to refresh the token and retry the request once
+                do {
+                    _ = try await authService.getValidAccessToken()
+                    
+                    // Recreate the request with the new token
+                    var retryRequest = request
+                    let newAccessToken = try await authService.getValidAccessToken()
+                    retryRequest.setValue("Bearer \(newAccessToken)", forHTTPHeaderField: "Authorization")
+                    
+                    // Retry the request with isRetry = true to prevent infinite loop
+                    return try await performRequest(retryRequest, expecting: type, isRetry: true)
+                } catch {
+                    // If token refresh fails, throw the original unauthorized error
+                    throw apiError
+                }
+            }
+            
             if error is APIError {
                 throw error
             }
