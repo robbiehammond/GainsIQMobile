@@ -71,8 +71,11 @@ class GainsIQAPIClient: ObservableObject {
             case 400...499:
                 if let errorData = try? JSONDecoder().decode([String: String].self, from: data),
                    let errorMessage = errorData["error"] {
-                    // Check if this is a refresh token error that should trigger token refresh
-                    if errorMessage.contains("refresh_token is required") && !isRetry {
+                    // Check if this is a refresh token error - this means the refresh token is invalid
+                    // and we should log out the user instead of trying to retry
+                    if errorMessage.contains("refresh_token is required") {
+                        // Force logout since the refresh token is invalid
+                        await authService.logout()
                         throw APIError.unauthorized
                     }
                     throw APIError.badRequest(errorMessage)
@@ -138,21 +141,23 @@ class GainsIQAPIClient: ObservableObject {
             }
         } catch {
             if let apiError = error as? APIError, case .unauthorized = apiError, !isRetry {
-                // If we get an unauthorized error and this isn't already a retry, 
-                // try to refresh the token and retry the request once
-                do {
-                    _ = try await authService.getValidAccessToken()
-                    
-                    // Recreate the request with the new token
-                    var retryRequest = request
-                    let newAccessToken = try await authService.getValidAccessToken()
-                    retryRequest.setValue("Bearer \(newAccessToken)", forHTTPHeaderField: "Authorization")
-                    
-                    // Retry the request with isRetry = true to prevent infinite loop
-                    return try await performRequest(retryRequest, expecting: type, isRetry: true)
-                } catch {
-                    // If token refresh fails, throw the original unauthorized error
-                    throw apiError
+                // Only try to refresh if we're still authenticated (haven't been logged out)
+                if authService.isAuthenticated {
+                    // Try to refresh the token and retry the request once
+                    do {
+                        _ = try await authService.getValidAccessToken()
+                        
+                        // Recreate the request with the new token
+                        var retryRequest = request
+                        let newAccessToken = try await authService.getValidAccessToken()
+                        retryRequest.setValue("Bearer \(newAccessToken)", forHTTPHeaderField: "Authorization")
+                        
+                        // Retry the request with isRetry = true to prevent infinite loop
+                        return try await performRequest(retryRequest, expecting: type, isRetry: true)
+                    } catch {
+                        // If token refresh fails, throw the original unauthorized error
+                        throw apiError
+                    }
                 }
             }
             

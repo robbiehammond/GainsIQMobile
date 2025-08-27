@@ -115,12 +115,24 @@ class AuthService: ObservableObject {
             throw APIError.invalidResponse
         }
         
-        if httpResponse.statusCode == 401 {
+        switch httpResponse.statusCode {
+        case 200:
+            break
+        case 400:
+            // Handle 400 errors which might indicate refresh token issues
+            if let errorData = try? JSONDecoder().decode([String: String].self, from: data),
+               let errorMessage = errorData["error"],
+               errorMessage.contains("refresh_token") {
+                // Refresh token is invalid, logout user
+                await logout()
+                throw APIError.unauthorized
+            }
+            await logout()
+            throw APIError.badRequest("Invalid refresh token")
+        case 401:
             await logout()
             throw APIError.unauthorized
-        }
-        
-        guard httpResponse.statusCode == 200 else {
+        default:
             let responseBody = data.isEmpty ? nil : String(data: data, encoding: .utf8)
             DebugLogger.shared.logError(
                 method: "POST",
