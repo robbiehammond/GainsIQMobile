@@ -4,18 +4,16 @@ class GainsIQAPIClient: ObservableObject {
     private let baseURL: String
     private let apiKey: String
     private let session: URLSession
-    private let authService: AuthService
     
-    init(baseURL: String, apiKey: String, authService: AuthService) {
+    init(baseURL: String, apiKey: String) {
         self.baseURL = baseURL
         self.apiKey = apiKey
-        self.authService = authService
         self.session = URLSession.shared
     }
     
     // MARK: - Private Helper Methods
     
-    private func createRequest(endpoint: String, method: HTTPMethod, body: Data? = nil, requiresAuth: Bool = true) async throws -> URLRequest {
+    private func createRequest(endpoint: String, method: HTTPMethod, body: Data? = nil) async throws -> URLRequest {
         guard let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
         }
@@ -23,12 +21,8 @@ class GainsIQAPIClient: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        
-        if requiresAuth {
-            let accessToken = try await authService.getValidAccessToken()
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        // Attach API key as Bearer token for all requests
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
         if let body = body {
             request.httpBody = body
@@ -37,7 +31,7 @@ class GainsIQAPIClient: ObservableObject {
         return request
     }
     
-    private func performRequest<T: Codable>(_ request: URLRequest, expecting type: T.Type, isRetry: Bool = false) async throws -> T {
+    private func performRequest<T: Codable>(_ request: URLRequest, expecting type: T.Type) async throws -> T {
         let startTime = Date()
         let requestId = logRequest(request)
         
@@ -71,13 +65,6 @@ class GainsIQAPIClient: ObservableObject {
             case 400...499:
                 if let errorData = try? JSONDecoder().decode([String: String].self, from: data),
                    let errorMessage = errorData["error"] {
-                    // Check if this is a refresh token error - this means the refresh token is invalid
-                    // and we should log out the user instead of trying to retry
-                    if errorMessage.contains("refresh_token is required") {
-                        // Force logout since the refresh token is invalid
-                        await authService.logout()
-                        throw APIError.unauthorized
-                    }
                     throw APIError.badRequest(errorMessage)
                 }
                 throw APIError.badRequest("Client error")
@@ -140,27 +127,6 @@ class GainsIQAPIClient: ObservableObject {
                 throw APIError.decodingError(error)
             }
         } catch {
-            if let apiError = error as? APIError, case .unauthorized = apiError, !isRetry {
-                // Only try to refresh if we're still authenticated (haven't been logged out)
-                if authService.isAuthenticated {
-                    // Try to refresh the token and retry the request once
-                    do {
-                        _ = try await authService.getValidAccessToken()
-                        
-                        // Recreate the request with the new token
-                        var retryRequest = request
-                        let newAccessToken = try await authService.getValidAccessToken()
-                        retryRequest.setValue("Bearer \(newAccessToken)", forHTTPHeaderField: "Authorization")
-                        
-                        // Retry the request with isRetry = true to prevent infinite loop
-                        return try await performRequest(retryRequest, expecting: type, isRetry: true)
-                    } catch {
-                        // If token refresh fails, throw the original unauthorized error
-                        throw apiError
-                    }
-                }
-            }
-            
             if error is APIError {
                 throw error
             }

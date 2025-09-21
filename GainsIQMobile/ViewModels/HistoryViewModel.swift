@@ -23,12 +23,9 @@ class HistoryViewModel: ObservableObject {
         if let apiClient = apiClient {
             self.apiClient = apiClient
         } else {
-            // Create a temporary AuthService for standalone usage
-            let authService = AuthService()
             self.apiClient = GainsIQAPIClient(
                 baseURL: Constants.API.defaultBaseURL,
-                apiKey: Constants.API.Headers.apiKey,
-                authService: authService
+                apiKey: UserDefaultsManager.shared.apiKey.isEmpty ? Config.apiKey : UserDefaultsManager.shared.apiKey
             )
         }
     }

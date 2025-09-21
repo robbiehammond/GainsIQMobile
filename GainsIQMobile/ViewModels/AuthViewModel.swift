@@ -4,21 +4,18 @@ import SwiftUI
 @MainActor
 class AuthViewModel: ObservableObject {
     @Published var isAuthenticated = false
-    @Published var isLoading = true
+    @Published var isLoading = false
     
-    private let authService: AuthService
-    private let apiClient: GainsIQAPIClient
+    private var apiClient: GainsIQAPIClient {
+        GainsIQAPIClient(
+            baseURL: Constants.API.defaultBaseURL,
+            apiKey: UserDefaultsManager.shared.apiKey.isEmpty ? Config.apiKey : UserDefaultsManager.shared.apiKey
+        )
+    }
     
     init() {
-        self.authService = AuthService()
-        self.apiClient = GainsIQAPIClient(
-            baseURL: Constants.API.defaultBaseURL,
-            apiKey: Config.apiKey,
-            authService: authService
-        )
-        
-        setupAuthObserver()
-        checkInitialAuthState()
+        // Consider user authenticated if an API key exists in settings
+        isAuthenticated = !UserDefaultsManager.shared.apiKey.isEmpty || !Config.apiKey.isEmpty
     }
     
     // MARK: - Public Properties
@@ -27,47 +24,16 @@ class AuthViewModel: ObservableObject {
         return apiClient
     }
     
-    var currentAuthService: AuthService {
-        return authService
-    }
-    
     // MARK: - Public Methods
     
-    func login(username: String, password: String) async throws {
-        try await authService.login(username: username, password: password)
+    func login(apiKey: String) async throws {
+        // Persist the API key and mark as authenticated
+        UserDefaultsManager.shared.apiKey = apiKey
+        isAuthenticated = true
     }
     
     func logout() async {
-        await authService.logout()
+        UserDefaultsManager.shared.apiKey = ""
+        isAuthenticated = false
     }
-    
-    func refreshToken() async throws {
-        _ = try await authService.refreshAccessToken()
-    }
-    
-    // MARK: - Private Methods
-    
-    private func setupAuthObserver() {
-        authService.$isAuthenticated
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.isAuthenticated, on: self)
-            .store(in: &cancellables)
-    }
-    
-    private func checkInitialAuthState() {
-        Task {
-            try? await Task.sleep(nanoseconds: 500_000_000) // Small delay to let auth service initialize
-            await MainActor.run {
-                self.isLoading = false
-            }
-        }
-    }
-    
-    // MARK: - Private Properties
-    
-    private var cancellables = Set<AnyCancellable>()
 }
-
-// MARK: - Extensions
-
-import Combine

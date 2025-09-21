@@ -2,8 +2,7 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
-    @State private var username = ""
-    @State private var password = ""
+    @State private var apiKey = ""
     @State private var isLoading = false
     @State private var errorMessage = ""
     @State private var showError = false
@@ -27,40 +26,31 @@ struct LoginView: View {
                 }
                 .padding(.bottom, 40)
                 
-                // Login Form
+                // API Key Form
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Username")
+                        Text("API Key")
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        TextField("Enter username", text: $username)
+                        SecureField("Enter API key", text: $apiKey)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
                     }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Password")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        SecureField("Enter password", text: $password)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    
+
                     Button(action: handleLogin) {
                         if isLoading {
                             SwiftUI.ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .frame(maxWidth: .infinity)
                         } else {
-                            Text("Sign In")
+                            Text("Save API Key")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
                         }
                     }
-                    .disabled(isLoading || username.isEmpty || password.isEmpty)
+                    .disabled(isLoading || apiKey.isEmpty)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                 }
@@ -80,14 +70,14 @@ struct LoginView: View {
     }
     
     private func handleLogin() {
-        guard !username.isEmpty && !password.isEmpty else { return }
+        guard !apiKey.isEmpty else { return }
         
         isLoading = true
         errorMessage = ""
         
         Task {
             do {
-                try await authViewModel.login(username: username, password: password)
+                try await authViewModel.login(apiKey: apiKey)
                 DispatchQueue.main.async {
                     self.isLoading = false
                 }

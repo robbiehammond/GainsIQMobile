@@ -3,7 +3,6 @@ import SwiftUI
 struct ExtrasView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var debugLogger = DebugLogger.shared
-    @State private var isRefreshingToken = false
     
     var body: some View {
         NavigationView {
@@ -37,61 +36,6 @@ struct ExtrasView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                }
-                
-                Section("Authentication") {
-                    // Token refresh status
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Image(systemName: "clock")
-                                .foregroundColor(.blue)
-                                .frame(width: 24)
-                            
-                            Text("Token Last Refreshed")
-                                .font(.headline)
-                            
-                            Spacer()
-                        }
-                        
-                        if let lastRefresh = authViewModel.currentAuthService.lastTokenRefresh {
-                            Text(lastRefresh, style: .relative)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text("Never")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    
-                    // Manual token refresh button
-                    Button(action: {
-                        Task {
-                            isRefreshingToken = true
-                            do {
-                                try await authViewModel.refreshToken()
-                            } catch {
-                                // Handle error silently or show alert if needed
-                            }
-                            isRefreshingToken = false
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: isRefreshingToken ? "arrow.clockwise" : "arrow.clockwise.circle")
-                                .foregroundColor(.blue)
-                                .frame(width: 24)
-                                .rotationEffect(.degrees(isRefreshingToken ? 360 : 0))
-                                .animation(isRefreshingToken ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshingToken)
-                            
-                            Text("Refresh Token")
-                                .foregroundColor(.blue)
-                            
-                            Spacer()
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .disabled(isRefreshingToken)
                 }
                 
                 Section("Account") {
