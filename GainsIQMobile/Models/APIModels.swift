@@ -70,6 +70,28 @@ struct LogWeightRequest: Codable {
     }
 }
 
+// MARK: - Injury & Bodypart Request Models
+
+struct InjuryRequest: Codable {
+    let timestamp: Int64?
+    let location: String
+    let details: String?
+    let active: Bool?
+}
+
+struct UpdateInjuryActiveRequest: Codable {
+    let timestamp: Int64
+    let active: Bool
+}
+
+struct AddBodypartRequest: Codable {
+    let location: String
+}
+
+struct DeleteBodypartRequest: Codable {
+    let location: String
+}
+
 // MARK: - Authentication Models
 
 struct LoginRequest: Codable {

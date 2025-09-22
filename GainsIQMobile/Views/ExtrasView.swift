@@ -7,6 +7,23 @@ struct ExtrasView: View {
     var body: some View {
         NavigationView {
             List {
+                Section("Health") {
+                    NavigationLink(destination: InjuryTrackingView(apiClient: authViewModel.currentAPIClient)) {
+                        HStack {
+                            Image(systemName: "bandage.fill")
+                                .foregroundColor(.orange)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Injury Tracker")
+                                    .font(.headline)
+                                Text("Log injuries and manage bodyparts")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
                 Section("Developer Tools") {
                     NavigationLink(destination: DebugLogView()) {
                         HStack {

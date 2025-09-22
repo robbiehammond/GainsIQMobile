@@ -94,6 +94,8 @@ class GainsIQAPIClient: ObservableObject {
                         return [] as! T
                     } else if type == [String].self {
                         return [] as! T
+                    } else if type == [InjuryEntry].self {
+                        return [] as! T
                     }
                 }
                 
@@ -102,6 +104,8 @@ class GainsIQAPIClient: ObservableObject {
                     if type == [WorkoutSet].self {
                         return [] as! T
                     } else if type == [String].self {
+                        return [] as! T
+                    } else if type == [InjuryEntry].self {
                         return [] as! T
                     }
                 }
@@ -112,6 +116,8 @@ class GainsIQAPIClient: ObservableObject {
                 if type == [WorkoutSet].self {
                     return [] as! T
                 } else if type == [String].self {
+                    return [] as! T
+                } else if type == [InjuryEntry].self {
                     return [] as! T
                 }
                 
@@ -256,6 +262,52 @@ class GainsIQAPIClient: ObservableObject {
     func getWeightTrend() async throws -> WeightTrend {
         let request = try await createRequest(endpoint: "/weight/trend", method: .GET)
         return try await performRequest(request, expecting: WeightTrend.self)
+    }
+    
+    // MARK: - Injury Endpoints
+    
+    func getInjuries() async throws -> [InjuryEntry] {
+        let request = try await createRequest(endpoint: "/injury", method: .GET)
+        return try await performRequest(request, expecting: [InjuryEntry].self)
+    }
+    
+    func getActiveInjuries() async throws -> [InjuryEntry] {
+        let request = try await createRequest(endpoint: "/injury/active", method: .GET)
+        return try await performRequest(request, expecting: [InjuryEntry].self)
+    }
+    
+    func logInjury(_ injury: InjuryRequest) async throws {
+        let bodyData = try JSONEncoder().encode(injury)
+        let request = try await createRequest(endpoint: "/injury", method: .POST, body: bodyData)
+        let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
+    }
+    
+    func setInjuryActive(timestamp: Int64, active: Bool) async throws {
+        let body = UpdateInjuryActiveRequest(timestamp: timestamp, active: active)
+        let bodyData = try JSONEncoder().encode(body)
+        let request = try await createRequest(endpoint: "/injury/active", method: .PUT, body: bodyData)
+        let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
+    }
+    
+    // MARK: - Bodypart Endpoints
+    
+    func getBodyparts() async throws -> [String] {
+        let request = try await createRequest(endpoint: "/bodyparts", method: .GET)
+        return try await performRequest(request, expecting: [String].self)
+    }
+    
+    func addBodypart(_ location: String) async throws {
+        let body = AddBodypartRequest(location: location)
+        let data = try JSONEncoder().encode(body)
+        let request = try await createRequest(endpoint: "/bodyparts", method: .POST, body: data)
+        let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
+    }
+    
+    func deleteBodypart(_ location: String) async throws {
+        let body = DeleteBodypartRequest(location: location)
+        let data = try JSONEncoder().encode(body)
+        let request = try await createRequest(endpoint: "/bodyparts", method: .DELETE, body: data)
+        let _: MessageResponse = try await performRequest(request, expecting: MessageResponse.self)
     }
     
 }
