@@ -215,6 +215,20 @@ struct InjuryTrackingView: View {
                 Text(injury.date.timeAgo())
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                if let periods = injury.activePeriods, !periods.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Active Periods:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        ForEach(periods, id: \.start) { p in
+                            Text("• \(p.formattedRange)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
             }
             Spacer()
             Button(action: action) {

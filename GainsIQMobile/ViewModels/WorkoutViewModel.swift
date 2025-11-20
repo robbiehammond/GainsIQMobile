@@ -89,8 +89,6 @@ class WorkoutViewModel: ObservableObject {
             showingSuccessMessage = true
             
             reps = ""
-            customTimestamp = nil
-            
         } catch {
             errorMessage = error.localizedDescription
         }
